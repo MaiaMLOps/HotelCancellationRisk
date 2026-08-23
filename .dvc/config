@@ -1,0 +1,6 @@
+[core]
+    remote = aws-remote
+['remote "aws-remote"']
+    url = s3://hotel-proj-dvcstore
+['remote "local-remote"']
+    url = /tmp/dvc-storage
