@@ -69,3 +69,6 @@ models:
 evaluation:
   threshold: 0.5
   primary_metric: average_precision
+
+mlflow:
+  experiment_name: hotel-cancellation-modeling
