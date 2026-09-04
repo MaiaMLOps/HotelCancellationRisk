@@ -1,0 +1,33 @@
+name: random_forest_random_search
+model: random_forest
+
+search:
+  n_iter: 30
+  scoring: average_precision
+  n_jobs: 1
+
+params:
+  classifier__n_estimators:
+    - 100
+    - 200
+    - 300
+    - 500
+
+  classifier__max_depth:
+    - null
+    - 8
+    - 12
+    - 16
+    - 20
+    - 30
+
+  classifier__min_samples_leaf:
+    - 1
+    - 2
+    - 5
+    - 10
+
+  classifier__max_features:
+    - sqrt
+    - log2
+    - 0.5

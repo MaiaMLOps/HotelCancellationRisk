@@ -1,0 +1,7 @@
+experiment: model/experiments/random_forest_tuned.yml
+selection_metric: f2
+threshold: 0.20499999999999996
+oof_f2: 0.8814698538784884
+oof_precision: 0.6925464553242561
+oof_recall: 0.9459849063003477
+oof_pattern_f2: 0.8163685265193097

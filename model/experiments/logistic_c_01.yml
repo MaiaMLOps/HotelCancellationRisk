@@ -1,0 +1,6 @@
+name: logistic_c_01
+model: logistic_regression
+description: Logistic Regression con mayor regularización L2.
+
+params:
+  C: 0.1

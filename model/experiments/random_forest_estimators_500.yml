@@ -1,0 +1,6 @@
+name: random_forest_estimators_500
+model: random_forest
+description: Evalúa el efecto de aumentar el número de árboles.
+
+params:
+  n_estimators: 500

@@ -1,0 +1,6 @@
+name: random_forest_depth_12
+model: random_forest
+description: Evalúa el efecto de reducir la profundidad máxima.
+
+params:
+  max_depth: 12
