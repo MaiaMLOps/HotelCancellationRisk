@@ -44,5 +44,5 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           npx wrangler@latest pages deploy ./frontend-deploy \
-            --project-name="mi-tablero-riesgo" \
+            --project-name="hotelcancellationrisk" \
             --branch="${{ inputs.environment == 'production' && 'main' || inputs.environment }}"
