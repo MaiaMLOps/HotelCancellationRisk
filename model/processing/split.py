@@ -187,11 +187,21 @@ def print_partition_summary(
     for partition_name in ["development", "test"]:
         mask = metadata["partition"].eq(partition_name)
 
+        group_sizes = (
+            metadata.loc[mask]
+            .groupby("group_id")
+            .size()
+        )
+
         print(
             f"{partition_name:12s} | "
             f"rows={mask.sum():6d} | "
-            f"patterns={metadata.loc[mask, 'group_id'].nunique():6d} | "
-            f"cancel_rate={y.loc[mask].mean():.4f}"
+            f"patterns={len(group_sizes):6d} | "
+            f"cancel_rate={y.loc[mask].mean():.4f} | "
+            f"avg_rows_pattern={group_sizes.mean():.3f} | "
+            f"singletons={100 * group_sizes.eq(1).mean():.2f}% | "
+            f"p95_group={group_sizes.quantile(0.95):.0f} | "
+            f"max_group={group_sizes.max()}"
         )
 
     # Check group independence between development and test.
@@ -256,11 +266,22 @@ def print_partition_summary(
 
         fold_overlap = validation_groups & training_groups
 
+        validation_group_sizes = (
+            metadata.loc[validation_mask]
+            .groupby("group_id")
+            .size()
+        )
+
         print(
             f"fold={fold} | "
             f"train_rows={training_mask.sum():6d} | "
             f"val_rows={validation_mask.sum():6d} | "
+            f"val_patterns={len(validation_group_sizes):6d} | "
             f"val_cancel_rate={y.loc[validation_mask].mean():.4f} | "
+            f"avg_rows_pattern={validation_group_sizes.mean():.3f} | "
+            f"singletons={100 * validation_group_sizes.eq(1).mean():.2f}% | "
+            f"p95_group={validation_group_sizes.quantile(0.95):.0f} | "
+            f"max_group={validation_group_sizes.max()} | "
             f"group_overlap={len(fold_overlap)}"
         )
 
