@@ -1,0 +1,5 @@
+name: logistic_default
+model: logistic_regression
+description: Baseline interpretable con los parámetros compartidos por defecto.
+
+params: {}
