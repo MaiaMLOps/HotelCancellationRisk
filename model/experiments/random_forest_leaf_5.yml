@@ -1,0 +1,6 @@
+name: random_forest_leaf_5
+model: random_forest
+description: Evalúa el efecto de aumentar el tamaño mínimo de las hojas.
+
+params:
+  min_samples_leaf: 5

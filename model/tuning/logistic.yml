@@ -1,0 +1,21 @@
+name: logistic_random_search
+model: logistic_regression
+
+search:
+  n_iter: 11
+  scoring: average_precision
+  n_jobs: 1
+
+params:
+  classifier__C:
+    - 0.001
+    - 0.003
+    - 0.01
+    - 0.03
+    - 0.1
+    - 0.3
+    - 1.0
+    - 3.0
+    - 10.0
+    - 30.0
+    - 100.0

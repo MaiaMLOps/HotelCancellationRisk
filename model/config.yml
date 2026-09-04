@@ -1,0 +1,74 @@
+data:
+  path: data/dataset.csv
+  target: is_canceled
+
+features:
+  exclude:
+    - reservation_status
+    - reservation_status_date
+
+  categorical:
+    - hotel
+    - arrival_date_month
+    - meal
+    - country
+    - market_segment
+    - distribution_channel
+    - reserved_room_type
+    - assigned_room_type
+    - deposit_type
+    - agent
+    - company
+    - customer_type
+
+  numerical:
+    - lead_time
+    - arrival_date_year
+    - arrival_date_week_number
+    - arrival_date_day_of_month
+    - stays_in_weekend_nights
+    - stays_in_week_nights
+    - adults
+    - children
+    - babies
+    - is_repeated_guest
+    - previous_cancellations
+    - previous_bookings_not_canceled
+    - booking_changes
+    - days_in_waiting_list
+    - adr
+    - required_car_parking_spaces
+    - total_of_special_requests
+
+split:
+  random_state: 42
+  test_n_folds: 5
+  test_fold: 0
+  cv_n_folds: 5
+
+preprocessing:
+  categorical_missing_value: Missing
+  numerical_imputer: median
+  scale_numerical: true
+
+models:
+  dummy:
+    strategy: prior
+
+  logistic_regression:
+    max_iter: 1000
+    C: 1.0
+    solver: lbfgs
+
+  random_forest:
+    n_estimators: 200
+    max_depth: 20
+    min_samples_leaf: 2
+    n_jobs: -1
+
+evaluation:
+  threshold: 0.5
+  primary_metric: average_precision
+
+mlflow:
+  experiment_name: hotel-cancellation-modeling

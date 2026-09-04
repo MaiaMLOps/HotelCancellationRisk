@@ -1,0 +1,6 @@
+name: logistic_random_search_best
+model: logistic_regression
+description: Best configuration selected by RandomizedSearchCV on the fixed development
+  folds.
+params:
+  C: 1.0

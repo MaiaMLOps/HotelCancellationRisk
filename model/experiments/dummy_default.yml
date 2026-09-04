@@ -1,0 +1,5 @@
+name: dummy_default
+model: dummy
+description: Baseline mínimo basado en la prevalencia de la clase objetivo.
+
+params: {}

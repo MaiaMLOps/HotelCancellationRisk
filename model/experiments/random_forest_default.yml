@@ -1,0 +1,5 @@
+name: random_forest_default
+model: random_forest
+description: Random Forest inicial con los parámetros compartidos por defecto.
+
+params: {}
