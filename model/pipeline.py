@@ -12,6 +12,7 @@ SUPPORTED_MODELS = {
     "dummy",
     "logistic_regression",
     "random_forest",
+    "xgboost",
 }
 
 
@@ -82,7 +83,17 @@ def build_estimator(
         return RandomForestClassifier(
             **params,
         )
-
+        
+    if model_name == "xgboost":
+        try:
+            from xgboost import XGBClassifier
+        except ImportError as exc:
+            raise ImportError(
+                "Instala requirements/xgboost.txt en el entorno activo."
+            ) from exc
+        params.setdefault("random_state", random_state)
+        return XGBClassifier(**params)
+    
     raise RuntimeError(
         f"Estimator construction failed for '{model_name}'."
     )
