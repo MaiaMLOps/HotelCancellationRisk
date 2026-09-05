@@ -1,0 +1,4 @@
+name: xgboost_default
+model: xgboost
+description: XGBoost base del taller con parametros fijos.
+params: {}
