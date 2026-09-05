@@ -81,6 +81,15 @@ models:
     n_jobs: 2
     random_state: 42
 
+  catboost:
+    iterations: 200
+    depth: 4
+    learning_rate: 0.05
+    l2_leaf_reg: 3
+    loss_function: Logloss
+    eval_metric: Logloss
+    thread_count: 2
+    
 evaluation:
   threshold: 0.5
   primary_metric: average_precision

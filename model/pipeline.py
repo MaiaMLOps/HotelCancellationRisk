@@ -13,8 +13,8 @@ SUPPORTED_MODELS = {
     "logistic_regression",
     "random_forest",
     "xgboost",
+    "catboost",
 }
-
 
 def get_model_params(
     model_name: str,
@@ -94,6 +94,25 @@ def build_estimator(
         params.setdefault("random_state", random_state)
         return XGBClassifier(**params)
     
+    if model_name == "catboost":
+        try:
+            from catboost import CatBoostClassifier
+        except ImportError as exc:
+            raise ImportError(
+                "Instala catboost en el entorno activo (pip install catboost)."
+            ) from exc
+        
+        params.setdefault("random_state", random_state)
+        
+        # Identificar índices de las columnas categóricas
+        num_cat_features = len(config["features"]["categorical"])
+        cat_indices = list(range(num_cat_features))
+        
+        params.setdefault("verbose", False)
+        params.setdefault("cat_features", cat_indices)
+        
+        return CatBoostClassifier(**params)
+    
     raise RuntimeError(
         f"Estimator construction failed for '{model_name}'."
     )
@@ -104,20 +123,11 @@ def build_model_pipeline(
     config: dict,
     params_override: dict[str, Any] | None = None,
 ) -> Pipeline:
-    """
-    Build the complete modeling pipeline:
-
-        raw predictors
-            -> shared preprocessing
-            -> selected classifier
-
-    The same preprocessing is reused for every supported classifier.
-    """
     return Pipeline(
         steps=[
             (
                 "preprocessor",
-                build_preprocessor(config),
+                build_preprocessor(config, model_name=model_name),
             ),
             (
                 "classifier",
