@@ -65,7 +65,31 @@ models:
     max_depth: 20
     min_samples_leaf: 2
     n_jobs: -1
+  
+  xgboost:
+    n_estimators: 200
+    max_depth: 4
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    min_child_weight: 1
+    reg_lambda: 1.0
+    objective: binary:logistic
+    eval_metric: logloss
+    tree_method: hist
+    device: cpu
+    n_jobs: 2
+    random_state: 42
 
+  catboost:
+    iterations: 200
+    depth: 4
+    learning_rate: 0.05
+    l2_leaf_reg: 3
+    loss_function: Logloss
+    eval_metric: Logloss
+    thread_count: 2
+    
 evaluation:
   threshold: 0.5
   primary_metric: average_precision

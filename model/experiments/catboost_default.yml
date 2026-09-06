@@ -1,0 +1,4 @@
+name: catboost_default
+model: catboost
+description: CatBoost base utilizando Ordered Target Encoding nativo.
+params: {}

@@ -35,81 +35,56 @@ def _categorical_to_string(
     )
 
 
-def build_preprocessor(config: dict) -> ColumnTransformer:
-    """
-    Build the common preprocessing pipeline used by all classifiers.
-
-    Categorical:
-        - explicit missing category
-        - string representation
-        - one-hot encoding with unknown-category protection
-
-    Numerical:
-        - median imputation
-        - standard scaling when enabled in config
-    """
+def build_preprocessor(config: dict, model_name: str = "") -> ColumnTransformer:
     categorical_columns = config["features"]["categorical"]
     numerical_columns = config["features"]["numerical"]
-
     preprocessing_config = config["preprocessing"]
 
-    categorical_pipeline = Pipeline(
-        steps=[
-            (
-                "to_string",
-                FunctionTransformer(
-                    _categorical_to_string,
-                    validate=False,
-                    feature_names_out="one-to-one",
-                    kw_args={
-                        "missing_value": preprocessing_config[
-                            "categorical_missing_value"
-                        ]
-                    },
-                ),
+    # 1. Paso base para categorías (texto)
+    cat_steps = [
+        (
+            "to_string",
+            FunctionTransformer(
+                _categorical_to_string,
+                validate=False,
+                feature_names_out="one-to-one",
+                kw_args={
+                    "missing_value": preprocessing_config["categorical_missing_value"]
+                },
             ),
+        )
+    ]
+
+    # 2. Condicionar el OHE (CatBoost no lo necesita)
+    if model_name != "catboost":
+        cat_steps.append(
             (
                 "onehot",
                 OneHotEncoder(
                     handle_unknown="ignore",
                     sparse_output=True,
                 ),
-            ),
-        ]
-    )
+            )
+        )
+
+    categorical_pipeline = Pipeline(steps=cat_steps)
 
     numerical_steps = [
         (
             "imputer",
-            SimpleImputer(
-                strategy=preprocessing_config[
-                    "numerical_imputer"
-                ]
-            ),
+            SimpleImputer(strategy=preprocessing_config["numerical_imputer"]),
         )
     ]
 
     if preprocessing_config["scale_numerical"]:
-        numerical_steps.append(
-            ("scaler", StandardScaler())
-        )
+        numerical_steps.append(("scaler", StandardScaler()))
 
-    numerical_pipeline = Pipeline(
-        steps=numerical_steps
-    )
+    numerical_pipeline = Pipeline(steps=numerical_steps)
 
     return ColumnTransformer(
         transformers=[
-            (
-                "categorical",
-                categorical_pipeline,
-                categorical_columns,
-            ),
-            (
-                "numerical",
-                numerical_pipeline,
-                numerical_columns,
-            ),
+            ("categorical", categorical_pipeline, categorical_columns),
+            ("numerical", numerical_pipeline, numerical_columns),
         ],
         remainder="drop",
     )

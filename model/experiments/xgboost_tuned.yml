@@ -1,0 +1,9 @@
+name: xgboost_random_search_best
+model: xgboost
+description: Best configuration selected by RandomizedSearchCV on the fixed development
+  folds.
+params:
+  n_estimators: 200
+  min_child_weight: 5
+  max_depth: 6
+  learning_rate: 0.1
