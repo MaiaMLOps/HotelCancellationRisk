@@ -1,0 +1,35 @@
+stages:
+  tune:
+    cmd: python -m model.tune --tuning model/tuning/random_forest.yml --save-best model/experiments/random_forest_tuned.yml
+    deps:
+      - data/dataset.csv
+      - model/tune.py
+      - model/pipeline.py
+      - model/processing/split.py
+      - model/processing/preprocessing.py
+      - model/tuning/random_forest.yml
+      - model/config.yml
+    outs:
+      - model/experiments/random_forest_tuned.yml
+
+  threshold:
+    cmd: python -m model.threshold --experiment model/experiments/random_forest_tuned.yml --save model/thresholds/random_forest_tuned.yml
+    deps:
+      - data/dataset.csv
+      - model/threshold.py
+      - model/experiments/random_forest_tuned.yml
+      - model/config.yml
+    outs:
+      - model/thresholds/random_forest_tuned.yml
+
+  evaluate:
+    cmd: python -m model.final_evaluate --experiment model/experiments/random_forest_tuned.yml --threshold model/thresholds/random_forest_tuned.yml --save model/results/random_forest_tuned_test.yml
+    deps:
+      - data/dataset.csv
+      - model/final_evaluate.py
+      - model/experiments/random_forest_tuned.yml
+      - model/thresholds/random_forest_tuned.yml
+      - model/config.yml
+    metrics:
+      - model/results/random_forest_tuned_test.yml:
+          cache: false

@@ -1,8 +1,12 @@
 import numpy as np
+
 from model.pipeline import build_model_pipeline
 from model.processing.split import (
-    load_config, load_dataset, create_partitions,
+    create_partitions,
+    load_config,
+    load_dataset,
 )
+
 
 def main():
     config = load_config()
@@ -11,7 +15,8 @@ def main():
     train = dev & ~metadata["cv_fold"].eq(0)
     valid = dev & metadata["cv_fold"].eq(0)
     pipeline = build_model_pipeline(
-        "xgboost", config,
+        "xgboost",
+        config,
         params_override={"n_estimators": 5, "max_depth": 2},
     )
     print("Prueba de interfaz: fold 0, cinco arboles.", flush=True)
@@ -27,6 +32,7 @@ def main():
         raise ValueError("Probabilidades fuera de [0, 1].")
     print("PRUEBA OK. Predicciones:", len(proba))
     print("No se utilizo test ni se registro un experimento.")
+
 
 if __name__ == "__main__":
     main()
