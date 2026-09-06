@@ -1,9 +1,0 @@
-name: random_forest_random_search_best
-model: random_forest
-description: Best configuration selected by RandomizedSearchCV on the fixed development
-  folds.
-params:
-  n_estimators: 500
-  min_samples_leaf: 2
-  max_features: 0.5
-  max_depth: 30

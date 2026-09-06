@@ -19,7 +19,6 @@ from model.processing.split import (
     load_dataset,
 )
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -33,17 +32,13 @@ def load_tuning_config(
         path = PROJECT_ROOT / path
 
     if not path.exists():
-        raise FileNotFoundError(
-            f"Tuning configuration not found: {path}"
-        )
+        raise FileNotFoundError(f"Tuning configuration not found: {path}")
 
     with path.open("r", encoding="utf-8") as file:
         tuning = yaml.safe_load(file)
 
     if tuning is None:
-        raise ValueError(
-            f"Tuning configuration is empty: {path}"
-        )
+        raise ValueError(f"Tuning configuration is empty: {path}")
 
     required = {
         "name",
@@ -55,9 +50,7 @@ def load_tuning_config(
     missing = required - set(tuning)
 
     if missing:
-        raise ValueError(
-            f"Missing tuning fields: {sorted(missing)}"
-        )
+        raise ValueError(f"Missing tuning fields: {sorted(missing)}")
 
     if tuning["model"] not in SUPPORTED_MODELS:
         raise ValueError(
@@ -81,19 +74,11 @@ def build_fixed_cv_splits(
 
     cv_splits = []
 
-    for fold in sorted(
-        metadata_dev["cv_fold"].unique()
-    ):
-        train_idx = np.flatnonzero(
-            fold_values != fold
-        )
-        validation_idx = np.flatnonzero(
-            fold_values == fold
-        )
+    for fold in sorted(metadata_dev["cv_fold"].unique()):
+        train_idx = np.flatnonzero(fold_values != fold)
+        validation_idx = np.flatnonzero(fold_values == fold)
 
-        cv_splits.append(
-            (train_idx, validation_idx)
-        )
+        cv_splits.append((train_idx, validation_idx))
 
     return cv_splits
 
@@ -108,14 +93,7 @@ def strip_classifier_prefix(
     """
     prefix = "classifier__"
 
-    return {
-        (
-            key[len(prefix):]
-            if key.startswith(prefix)
-            else key
-        ): value
-        for key, value in params.items()
-    }
+    return {(key.removeprefix(prefix)): value for key, value in params.items()}
 
 
 def save_best_experiment(
@@ -142,9 +120,7 @@ def save_best_experiment(
             "RandomizedSearchCV on the fixed "
             "development folds."
         ),
-        "params": strip_classifier_prefix(
-            best_params
-        ),
+        "params": strip_classifier_prefix(best_params),
     }
 
     with path.open(
@@ -158,9 +134,7 @@ def save_best_experiment(
             allow_unicode=True,
         )
 
-    print(
-        f"\nBest experiment saved to: {path}"
-    )
+    print(f"\nBest experiment saved to: {path}")
 
 
 def run_tuning(
@@ -168,9 +142,7 @@ def run_tuning(
 ):
     """Run RandomizedSearchCV over the fixed development folds."""
     config = load_config()
-    tuning = load_tuning_config(
-        tuning_path
-    )
+    tuning = load_tuning_config(tuning_path)
 
     df = load_dataset(config)
 
@@ -179,28 +151,15 @@ def run_tuning(
         config,
     )
 
-    development_mask = metadata[
-        "partition"
-    ].eq("development")
+    development_mask = metadata["partition"].eq("development")
 
-    X_dev = (
-        X.loc[development_mask]
-        .reset_index(drop=True)
-    )
+    X_dev = X.loc[development_mask].reset_index(drop=True)
 
-    y_dev = (
-        y.loc[development_mask]
-        .reset_index(drop=True)
-    )
+    y_dev = y.loc[development_mask].reset_index(drop=True)
 
-    metadata_dev = (
-        metadata.loc[development_mask]
-        .reset_index(drop=True)
-    )
+    metadata_dev = metadata.loc[development_mask].reset_index(drop=True)
 
-    cv_splits = build_fixed_cv_splits(
-        metadata_dev
-    )
+    cv_splits = build_fixed_cv_splits(metadata_dev)
 
     pipeline = build_model_pipeline(
         model_name=tuning["model"],
@@ -215,9 +174,7 @@ def run_tuning(
         n_iter=search_config["n_iter"],
         scoring=search_config["scoring"],
         cv=cv_splits,
-        random_state=config["split"][
-            "random_state"
-        ],
+        random_state=config["split"]["random_state"],
         n_jobs=search_config.get(
             "n_jobs",
             1,
@@ -230,16 +187,9 @@ def run_tuning(
     print("\n" + "=" * 70)
     print(f"TUNING: {tuning['name']}")
     print(f"MODEL: {tuning['model']}")
-    print(
-        f"DEVELOPMENT ROWS: {len(X_dev)}"
-    )
-    print(
-        f"FIXED CV FOLDS: {len(cv_splits)}"
-    )
-    print(
-        f"RANDOM CONFIGURATIONS: "
-        f"{search_config['n_iter']}"
-    )
+    print(f"DEVELOPMENT ROWS: {len(X_dev)}")
+    print(f"FIXED CV FOLDS: {len(cv_splits)}")
+    print(f"RANDOM CONFIGURATIONS: {search_config['n_iter']}")
     print("=" * 70)
 
     search.fit(
@@ -254,12 +204,8 @@ def run_tuning(
     )
 
     print("\nBEST RESULT")
-    print(
-        f"Score: {search.best_score_:.4f}"
-    )
-    print(
-        f"Parameters: {search.best_params_}"
-    )
+    print(f"Score: {search.best_score_:.4f}")
+    print(f"Parameters: {search.best_params_}")
 
     print("\nTOP 5 CONFIGURATIONS")
 
@@ -277,18 +223,14 @@ def run_tuning(
 def parse_args():
     parser = argparse.ArgumentParser(
         description=(
-            "Tune one model using RandomizedSearchCV "
-            "and the fixed grouped CV folds."
+            "Tune one model using RandomizedSearchCV and the fixed grouped CV folds."
         )
     )
 
     parser.add_argument(
         "--tuning",
         required=True,
-        help=(
-            "Path to tuning YAML, for example "
-            "model/tuning/random_forest.yml"
-        ),
+        help=("Path to tuning YAML, for example model/tuning/random_forest.yml"),
     )
 
     parser.add_argument(
@@ -306,9 +248,7 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    tuning, search, _ = run_tuning(
-        args.tuning
-    )
+    tuning, search, _ = run_tuning(args.tuning)
 
     if args.save_best:
         save_best_experiment(

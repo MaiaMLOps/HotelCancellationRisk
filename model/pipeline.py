@@ -7,7 +7,6 @@ from sklearn.pipeline import Pipeline
 
 from model.processing.preprocessing import build_preprocessor
 
-
 SUPPORTED_MODELS = {
     "dummy",
     "logistic_regression",
@@ -15,6 +14,7 @@ SUPPORTED_MODELS = {
     "xgboost",
     "catboost",
 }
+
 
 def get_model_params(
     model_name: str,
@@ -83,7 +83,7 @@ def build_estimator(
         return RandomForestClassifier(
             **params,
         )
-        
+
     if model_name == "xgboost":
         try:
             from xgboost import XGBClassifier
@@ -93,7 +93,7 @@ def build_estimator(
             ) from exc
         params.setdefault("random_state", random_state)
         return XGBClassifier(**params)
-    
+
     if model_name == "catboost":
         try:
             from catboost import CatBoostClassifier
@@ -101,21 +101,19 @@ def build_estimator(
             raise ImportError(
                 "Instala catboost en el entorno activo (pip install catboost)."
             ) from exc
-        
+
         params.setdefault("random_state", random_state)
-        
+
         # Identificar índices de las columnas categóricas
         num_cat_features = len(config["features"]["categorical"])
         cat_indices = list(range(num_cat_features))
-        
+
         params.setdefault("verbose", False)
         params.setdefault("cat_features", cat_indices)
-        
+
         return CatBoostClassifier(**params)
-    
-    raise RuntimeError(
-        f"Estimator construction failed for '{model_name}'."
-    )
+
+    raise RuntimeError(f"Estimator construction failed for '{model_name}'.")
 
 
 def build_model_pipeline(

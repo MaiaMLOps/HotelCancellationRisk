@@ -20,7 +20,6 @@ from model.pipeline import (
 )
 from model.processing.split import load_config
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -34,17 +33,13 @@ def load_experiment(
         path = PROJECT_ROOT / path
 
     if not path.exists():
-        raise FileNotFoundError(
-            f"Experiment file not found: {path}"
-        )
+        raise FileNotFoundError(f"Experiment file not found: {path}")
 
     with path.open("r", encoding="utf-8") as file:
         experiment = yaml.safe_load(file)
 
     if experiment is None:
-        raise ValueError(
-            f"Experiment configuration is empty: {path}"
-        )
+        raise ValueError(f"Experiment configuration is empty: {path}")
 
     required_fields = {
         "name",
@@ -56,8 +51,7 @@ def load_experiment(
 
     if missing_fields:
         raise ValueError(
-            "Experiment configuration is missing fields: "
-            f"{sorted(missing_fields)}"
+            f"Experiment configuration is missing fields: {sorted(missing_fields)}"
         )
 
     model_name = experiment["model"]
@@ -69,9 +63,7 @@ def load_experiment(
         )
 
     if not isinstance(experiment["params"], dict):
-        raise TypeError(
-            "'params' must be a YAML dictionary."
-        )
+        raise TypeError("'params' must be a YAML dictionary.")
 
     return experiment
 
@@ -84,7 +76,7 @@ def get_git_commit() -> str:
             cwd=PROJECT_ROOT,
             text=True,
         ).strip()
-    except Exception:
+    except Exception:  # noqa: BLE001
         return "unknown"
 
 
@@ -96,17 +88,13 @@ def get_git_branch() -> str:
             cwd=PROJECT_ROOT,
             text=True,
         ).strip()
-    except Exception:
+    except Exception:  # noqa: BLE001
         return "unknown"
 
 
 def get_data_dvc_md5() -> str:
     """Read the dataset MD5 tracked by DVC."""
-    dvc_path = (
-        PROJECT_ROOT
-        / "data"
-        / "dataset.csv.dvc"
-    )
+    dvc_path = PROJECT_ROOT / "data" / "dataset.csv.dvc"
 
     try:
         with dvc_path.open(
@@ -115,10 +103,8 @@ def get_data_dvc_md5() -> str:
         ) as file:
             dvc_config = yaml.safe_load(file)
 
-        return str(
-            dvc_config["outs"][0]["md5"]
-        )
-    except Exception:
+        return str(dvc_config["outs"][0]["md5"])
+    except Exception:  # noqa: BLE001
         return "unknown"
 
 
@@ -147,19 +133,12 @@ def log_run_to_mlflow(
 
     mlflow.log_params(
         {
-            f"model_{key}": (
-                "None" if value is None else value
-            )
+            f"model_{key}": ("None" if value is None else value)
             for key, value in resolved_params.items()
         }
     )
 
-    mlflow.log_metrics(
-        {
-            key: float(value)
-            for key, value in summary.items()
-        }
-    )
+    mlflow.log_metrics({key: float(value) for key, value in summary.items()})
 
     mlflow.set_tags(
         {
@@ -229,9 +208,7 @@ def run_experiment(
     """
     config = load_config()
 
-    experiment = load_experiment(
-        experiment_path
-    )
+    experiment = load_experiment(experiment_path)
 
     model_name = experiment["model"]
     params_override = experiment["params"]
@@ -243,37 +220,21 @@ def run_experiment(
     )
 
     print("\n" + "=" * 70)
-    print(
-        f"EXPERIMENT: {experiment['name']}"
-    )
+    print(f"EXPERIMENT: {experiment['name']}")
     print(f"MODEL: {model_name}")
 
     if experiment.get("description"):
-        print(
-            f"DESCRIPTION: "
-            f"{experiment['description']}"
-        )
+        print(f"DESCRIPTION: {experiment['description']}")
 
-    print(
-        f"RESOLVED PARAMETERS: "
-        f"{resolved_params}"
-    )
+    print(f"RESOLVED PARAMETERS: {resolved_params}")
     print("=" * 70)
 
     if tracking_uri:
+        mlflow.set_tracking_uri(tracking_uri)
 
-        mlflow.set_tracking_uri(
-            tracking_uri
-        )
+        mlflow.set_experiment(config["mlflow"]["experiment_name"])
 
-        mlflow.set_experiment(
-            config["mlflow"]["experiment_name"]
-        )
-
-        with mlflow.start_run(
-            run_name=experiment["name"]
-        ):
-
+        with mlflow.start_run(run_name=experiment["name"]):
             fold_results, summary = evaluate_cv(
                 model_name=model_name,
                 config=config,
@@ -296,12 +257,9 @@ def run_experiment(
                 config=config,
             )
 
-            print(
-                "\nMLflow run registered successfully."
-            )
+            print("\nMLflow run registered successfully.")
 
     else:
-
         fold_results, summary = evaluate_cv(
             model_name=model_name,
             config=config,
@@ -325,25 +283,18 @@ def run_experiment(
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description=(
-            "Run one hotel-cancellation "
-            "model experiment."
-        )
+        description=("Run one hotel-cancellation model experiment.")
     )
 
     parser.add_argument(
         "--experiment",
         required=True,
-        help=(
-            "Path to an experiment YAML file."
-        ),
+        help=("Path to an experiment YAML file."),
     )
 
     parser.add_argument(
         "--tracking-uri",
-        default=os.getenv(
-            "MLFLOW_TRACKING_URI"
-        ),
+        default=os.getenv("MLFLOW_TRACKING_URI"),
         help=(
             "Optional MLflow tracking URI. "
             "It can also be supplied through "
