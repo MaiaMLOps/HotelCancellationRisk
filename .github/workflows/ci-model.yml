@@ -140,7 +140,7 @@ jobs:
           aws_session = os.environ.get("AWS_SESSION_TOKEN", "")
           
           dvc_env = f"AWS_ACCESS_KEY_ID={aws_access} AWS_SECRET_ACCESS_KEY={aws_secret} AWS_SESSION_TOKEN={aws_session}"
-          run_cmd(f"cd {repo_name} && {dvc_env} dvc pull")
+          run_cmd(f"cd {repo_name} && {dvc_env} dvc pull --force")
           
           event_name = os.environ.get("GITHUB_EVENT_NAME", "")
           
