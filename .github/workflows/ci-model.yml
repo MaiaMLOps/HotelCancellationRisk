@@ -101,83 +101,83 @@ jobs:
           studio.start(Machine.CPU)
 
           print("Cloning repository inside the Studio...")
-              token = os.environ.get("GITHUB_TOKEN")
-              repo = os.environ.get("GITHUB_REPOSITORY")
-              repo_name = repo.split("/")[-1]
-              
-              if token:
-                  repo_url = f"https://x-access-token:{token}@github.com/{repo}.git"
-              else:
-                  repo_url = f"https://github.com/{repo}.git"
+          token = os.environ.get("GITHUB_TOKEN")
+          repo = os.environ.get("GITHUB_REPOSITORY")
+          repo_name = repo.split("/")[-1]
+          
+          if token:
+              repo_url = f"https://x-access-token:{token}@github.com/{repo}.git"
+          else:
+              repo_url = f"https://github.com/{repo}.git"
 
-              clone_or_pull_cmd = (
-                  f"if [ -d \"{repo_name}/.git\" ]; then "
-                  f"  echo \"Repository already exists. Syncing...\"; "
-                  f"  cd {repo_name} && git fetch origin && git checkout {branch} && git reset --hard origin/{branch} && git clean -fd --exclude=checkpoints/ --exclude=.dvc/cache/; "
-                  f"else "
-                  f"  echo \"Repository does not exist. Cloning...\"; "
-                  f"  git clone --single-branch --branch {branch} {repo_url} {repo_name}; "
-                  f"fi"
-              )
-              studio.run_with_exit_code(clone_or_pull_cmd)
+          clone_or_pull_cmd = (
+              f"if [ -d \"{repo_name}/.git\" ]; then "
+              f"  echo \"Repository already exists. Syncing...\"; "
+              f"  cd {repo_name} && git fetch origin && git checkout {branch} && git reset --hard origin/{branch} && git clean -fd --exclude=checkpoints/ --exclude=.dvc/cache/; "
+              f"else "
+              f"  echo \"Repository does not exist. Cloning...\"; "
+              f"  git clone --single-branch --branch {branch} {repo_url} {repo_name}; "
+              f"fi"
+          )
+          studio.run_with_exit_code(clone_or_pull_cmd)
+          
+          print("Installing project requirements using uv...")
+          studio.run_with_exit_code("pip install uv")
+          studio.run_with_exit_code(f"cd {repo_name} && uv pip install --system -r requirements/modeling.txt -r requirements/dvc.txt")
+          
+          print("Pulling data with DVC...")
+          aws_access = os.environ.get("AWS_ACCESS_KEY_ID", "")
+          aws_secret = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
+          aws_session = os.environ.get("AWS_SESSION_TOKEN", "")
+          
+          dvc_env = f"AWS_ACCESS_KEY_ID={aws_access} AWS_SECRET_ACCESS_KEY={aws_secret} AWS_SESSION_TOKEN={aws_session}"
+          studio.run_with_exit_code(f"cd {repo_name} && {dvc_env} dvc pull")
+          
+          event_name = os.environ.get("GITHUB_EVENT_NAME", "")
+          
+          if event_name == "pull_request":
+              print("Ejecutando validacion rapida (PR)...")
+              results = studio.run_with_exit_code(f"cd {repo_name} && python -m model.experiment --experiment model/experiments/logistic_default.yml")
+              print("Resultados validacion:")
+              print(results)
+          elif event_name == "push":
+              print("Ejecutando evaluacion rapida con hiperparametros guardados (Push a main)...")
+              mlflow_uri = os.environ.get("MLFLOW_TRACKING_URI", "")
               
-              print("Installing project requirements using uv...")
-              studio.run_with_exit_code("pip install uv")
-              studio.run_with_exit_code(f"cd {repo_name} && uv pip install --system -r requirements/modeling.txt -r requirements/dvc.txt")
+              cmds = [
+                  # Se salta el tuning pesado, asume que random_forest_tuned.yml ya tiene parametros
+                  "python -m model.threshold --experiment model/experiments/random_forest_tuned.yml --save model/thresholds/random_forest_tuned.yml",
+                  "python -m model.final_evaluate --experiment model/experiments/random_forest_tuned.yml --threshold model/thresholds/random_forest_tuned.yml --save model/results/random_forest_tuned_test.yml",
+              ]
               
-              print("Pulling data with DVC...")
-              aws_access = os.environ.get("AWS_ACCESS_KEY_ID", "")
-              aws_secret = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
-              aws_session = os.environ.get("AWS_SESSION_TOKEN", "")
-              
-              dvc_env = f"AWS_ACCESS_KEY_ID={aws_access} AWS_SECRET_ACCESS_KEY={aws_secret} AWS_SESSION_TOKEN={aws_session}"
-              studio.run_with_exit_code(f"cd {repo_name} && {dvc_env} dvc pull")
-              
-              event_name = os.environ.get("GITHUB_EVENT_NAME", "")
-              
-              if event_name == "pull_request":
-                  print("Ejecutando validacion rapida (PR)...")
-                  results = studio.run_with_exit_code(f"cd {repo_name} && python -m model.experiment --experiment model/experiments/logistic_default.yml")
-                  print("Resultados validacion:")
-                  print(results)
-              elif event_name == "push":
-                  print("Ejecutando evaluacion rapida con hiperparametros guardados (Push a main)...")
-                  mlflow_uri = os.environ.get("MLFLOW_TRACKING_URI", "")
-                  
-                  cmds = [
-                      # Se salta el tuning pesado, asume que random_forest_tuned.yml ya tiene parametros
-                      "python -m model.threshold --experiment model/experiments/random_forest_tuned.yml --save model/thresholds/random_forest_tuned.yml",
-                      "python -m model.final_evaluate --experiment model/experiments/random_forest_tuned.yml --threshold model/thresholds/random_forest_tuned.yml --save model/results/random_forest_tuned_test.yml",
-                  ]
-                  
-                  if mlflow_uri:
-                      cmds.append(f"MLFLOW_TRACKING_URI={mlflow_uri} python -m model.log_final --experiment model/experiments/random_forest_tuned.yml --threshold model/thresholds/random_forest_tuned.yml --results model/results/random_forest_tuned_test.yml")
-                  else:
-                      print("MLFLOW_TRACKING_URI vacio: Omitiendo registro en MLflow.")
-                  
-                  for cmd in cmds:
-                      print(f"\\nEjecutando: {cmd}")
-                      res = studio.run_with_exit_code(f"cd {repo_name} && {cmd}")
-                      print(res)
+              if mlflow_uri:
+                  cmds.append(f"MLFLOW_TRACKING_URI={mlflow_uri} python -m model.log_final --experiment model/experiments/random_forest_tuned.yml --threshold model/thresholds/random_forest_tuned.yml --results model/results/random_forest_tuned_test.yml")
               else:
-                  print("Ejecutando entrenamiento COMPLETO con tuning (Manual/Dispatch)...")
-                  mlflow_uri = os.environ.get("MLFLOW_TRACKING_URI", "")
-                  
-                  cmds = [
-                      "python -m model.tune --tuning model/tuning/random_forest.yml --save-best model/experiments/random_forest_tuned.yml",
-                      "python -m model.threshold --experiment model/experiments/random_forest_tuned.yml --save model/thresholds/random_forest_tuned.yml",
-                      "python -m model.final_evaluate --experiment model/experiments/random_forest_tuned.yml --threshold model/thresholds/random_forest_tuned.yml --save model/results/random_forest_tuned_test.yml",
-                  ]
-                  
-                  if mlflow_uri:
-                      cmds.append(f"MLFLOW_TRACKING_URI={mlflow_uri} python -m model.log_final --experiment model/experiments/random_forest_tuned.yml --threshold model/thresholds/random_forest_tuned.yml --results model/results/random_forest_tuned_test.yml")
-                  else:
-                      print("MLFLOW_TRACKING_URI vacio: Omitiendo registro en MLflow.")
-                  
-                  for cmd in cmds:
-                      print(f"\\nEjecutando: {cmd}")
-                      res = studio.run_with_exit_code(f"cd {repo_name} && {cmd}")
-                      print(res)
+                  print("MLFLOW_TRACKING_URI vacio: Omitiendo registro en MLflow.")
+              
+              for cmd in cmds:
+                  print(f"\\nEjecutando: {cmd}")
+                  res = studio.run_with_exit_code(f"cd {repo_name} && {cmd}")
+                  print(res)
+          else:
+              print("Ejecutando entrenamiento COMPLETO con tuning (Manual/Dispatch)...")
+              mlflow_uri = os.environ.get("MLFLOW_TRACKING_URI", "")
+              
+              cmds = [
+                  "python -m model.tune --tuning model/tuning/random_forest.yml --save-best model/experiments/random_forest_tuned.yml",
+                  "python -m model.threshold --experiment model/experiments/random_forest_tuned.yml --save model/thresholds/random_forest_tuned.yml",
+                  "python -m model.final_evaluate --experiment model/experiments/random_forest_tuned.yml --threshold model/thresholds/random_forest_tuned.yml --save model/results/random_forest_tuned_test.yml",
+              ]
+              
+              if mlflow_uri:
+                  cmds.append(f"MLFLOW_TRACKING_URI={mlflow_uri} python -m model.log_final --experiment model/experiments/random_forest_tuned.yml --threshold model/thresholds/random_forest_tuned.yml --results model/results/random_forest_tuned_test.yml")
+              else:
+                  print("MLFLOW_TRACKING_URI vacio: Omitiendo registro en MLflow.")
+              
+              for cmd in cmds:
+                  print(f"\\nEjecutando: {cmd}")
+                  res = studio.run_with_exit_code(f"cd {repo_name} && {cmd}")
+                  print(res)
           '
           
       - name: Stop Lightning AI Studio (On Success, Failure or Cancel)
