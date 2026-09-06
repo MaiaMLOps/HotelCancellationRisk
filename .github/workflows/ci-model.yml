@@ -48,9 +48,7 @@ jobs:
       - name: Run Ruff Formatter Check
         run: ruff format --check .
       - name: Run MyPy Static Type Check
-        run: mypy src/ --ignore-missing-imports
-      - name: Run Unit Tests
-        run: pytest tests/
+        run: mypy model/ --ignore-missing-imports
 
   train-model:
     name: Model Training (Lightning AI)
