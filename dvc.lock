@@ -1,0 +1,58 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: python src/data_prep.py
+    deps:
+    - path: data/dataset.csv
+      hash: md5
+      md5: 5bf588c5a949443e021fb7c847d31b27
+      size: 16855599
+    - path: src/config.py
+      hash: md5
+      md5: 92fb2cac20f4df0066008714988de37e
+      size: 1222
+    - path: src/data_prep.py
+      hash: md5
+      md5: 1659ffc0caa5ad73e5d7ba75bdd583d0
+      size: 4418
+    outs:
+    - path: data/processed
+      hash: md5
+      md5: 1835b07cb831ec6cb1a326f76ff815d4.dir
+      size: 2584921
+      nfiles: 4
+    - path: models/encoder.pkl
+      hash: md5
+      md5: 6d3084059c660d1a37c15e0361498739
+      size: 2871
+  train:
+    cmd: python src/train.py
+    deps:
+    - path: data/processed
+      hash: md5
+      md5: 1835b07cb831ec6cb1a326f76ff815d4.dir
+      size: 2584921
+      nfiles: 4
+    - path: src/evaluate.py
+      hash: md5
+      md5: 763be175b05fa18ebcd2336277e4f9dd
+      size: 1902
+    - path: src/train.py
+      hash: md5
+      md5: aa903b2033873c349aefe5f758b8116f
+      size: 2757
+    params:
+      params.yaml:
+        train.learning_rate: 0.1
+        train.max_depth: 6
+        train.model: xgboost
+        train.n_estimators: 200
+    outs:
+    - path: metrics.json
+      hash: md5
+      md5: 3dbf1435d7bd95c8bdfff9745525a064
+      size: 258
+    - path: models/xgboost.pkl
+      hash: md5
+      md5: bfb8d72c0fb35a9d28987f19b8575bcb
+      size: 682518

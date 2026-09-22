@@ -1,0 +1,114 @@
+name: CD Pipeline - API Deployment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Entorno de despliegue'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      model_source:
+        description: 'Fuente del modelo (local / mlflow)'
+        required: true
+        default: 'local'
+        type: choice
+        options:
+          - local
+          - mlflow
+
+env:
+  # Valores por defecto que se usarán en push a main, o elegidos manualmente
+  ENVIRONMENT: ${{ inputs.environment || 'staging' }}
+  MODEL_SOURCE: ${{ inputs.model_source || 'local' }}
+  # Variables adicionales para MLflow desde secrets (con valores fallback)
+  MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI || 'http://host.docker.internal:5000' }}
+  MODEL_NAME: ${{ secrets.MODEL_NAME || 'hotel-cancellation-model' }}
+  MODEL_VERSION: ${{ secrets.MODEL_VERSION || 'latest' }}
+
+jobs:
+  deploy-api:
+    name: Deploy API to VM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy and Build via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          ENV_DEPLOY: ${{ env.ENVIRONMENT }}
+          ENV_MODEL_SOURCE: ${{ env.MODEL_SOURCE }}
+          ENV_MLFLOW_URI: ${{ env.MLFLOW_TRACKING_URI }}
+          ENV_MODEL_NAME: ${{ env.MODEL_NAME }}
+          ENV_MODEL_VERSION: ${{ env.MODEL_VERSION }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          envs: ENV_DEPLOY,ENV_MODEL_SOURCE,ENV_MLFLOW_URI,ENV_MODEL_NAME,ENV_MODEL_VERSION
+          script: |
+            echo "Conectado a la VM exitosamente..."
+            echo "Desplegando en ambiente: $ENV_DEPLOY"
+            echo "Fuente del modelo (ARG): $ENV_MODEL_SOURCE"
+            
+            # 1. Clonar o actualizar el repositorio en la VM
+            if [ ! -d "HotelCancellationRisk" ]; then
+              echo "Clonando el repositorio..."
+              git clone https://github.com/${{ github.repository }}.git HotelCancellationRisk
+            fi
+            
+            cd HotelCancellationRisk
+            
+            # Traer los últimos cambios
+            echo "Actualizando el código..."
+            git pull origin main
+            
+            # 2. Hacer el build de la imagen de Docker pasándole el ARG desde GitHub Actions
+            echo "Construyendo la imagen Docker 'api-hotel' con MODEL_SOURCE=$ENV_MODEL_SOURCE..."
+            docker build --build-arg MODEL_SOURCE=$ENV_MODEL_SOURCE -t api-hotel .
+            
+            # 3. Desplegar (Detener el contenedor viejo e iniciar el nuevo)
+            echo "Deteniendo contenedor anterior (si existe)..."
+            docker stop api-hotel || true
+            docker rm api-hotel || true
+            
+            echo "Iniciando nuevo contenedor en modo: $ENV_MODEL_SOURCE ..."
+            if [ "$ENV_MODEL_SOURCE" = "mlflow" ]; then
+              docker run -d --name api-hotel -p 8000:8000 \
+                -e MODEL_SOURCE=$ENV_MODEL_SOURCE \
+                -e MLFLOW_TRACKING_URI=$ENV_MLFLOW_URI \
+                -e MODEL_NAME=$ENV_MODEL_NAME \
+                -e MODEL_VERSION=$ENV_MODEL_VERSION \
+                api-hotel
+            else
+              docker run -d --name api-hotel -p 8000:8000 \
+                -e MODEL_SOURCE=$ENV_MODEL_SOURCE \
+                api-hotel
+            fi
+            
+            echo "Realizando 'purge' de imágenes Docker no utilizadas para liberar espacio..."
+            docker image prune -a -f
+            
+            # Esperar unos segundos para que FastAPI arranque por completo
+            echo "Esperando 10 segundos a que la API levante..."
+            sleep 10
+            
+            # 4. Validar el Health Check
+            echo "Ejecutando Health Check en http://localhost:8000/health ..."
+            
+            # Usamos curl para obtener el código de estado HTTP
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/health)
+            
+            if [ "$HTTP_STATUS" -eq 200 ]; then
+              echo "✅ Despliegue exitoso. La API responde correctamente (HTTP 200)."
+            else
+              echo "❌ Error en el despliegue. El health check devolvió el código: $HTTP_STATUS"
+              echo "Mostrando los logs del contenedor para depurar:"
+              docker logs api-hotel
+              exit 1
+            fi
