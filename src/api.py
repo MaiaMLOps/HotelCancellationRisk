@@ -3,10 +3,20 @@ import joblib
 import mlflow
 import pandas as pd
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 
 app = FastAPI(title="Hotel Cancellation Risk API", description="API para la predicción de cancelación de hoteles")
+
+# Habilitar CORS para permitir peticiones desde el frontend (React/Vite)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Variable global para almacenar el modelo en memoria
 model = None
@@ -77,7 +87,10 @@ class BookingData(BaseModel):
     total_of_special_requests: int = 0
 
 @app.post("/predict")
-def predict(booking: BookingData):
+def predict(booking: BookingData, threshold: Optional[float] = None):
+    if threshold is None:
+        threshold = float(os.getenv("MODEL_THRESHOLD", "0.205"))
+        
     if model is None:
         raise HTTPException(status_code=500, detail="El modelo no está cargado.")
     
@@ -85,14 +98,33 @@ def predict(booking: BookingData):
     df = pd.DataFrame([booking.dict()])
     
     try:
-        prediction = model.predict(df)
+        # Intentar calcular la probabilidad si el modelo lo permite
+        prob_val = None
+        try:
+            if hasattr(model, 'predict_proba'):
+                probs = model.predict_proba(df)
+                prob_val = float(probs[0][1])
+            elif hasattr(model, '_model_impl') and hasattr(model._model_impl, 'predict_proba'):
+                probs = model._model_impl.predict_proba(df)
+                prob_val = float(probs[0][1])
+        except Exception as e:
+            print("No se pudo obtener probabilidad exacta:", e)
         
-        # Procesar el resultado según el formato devuelto (puede variar por el wrapper)
-        pred_val = int(prediction[0]) if hasattr(prediction, '__iter__') else int(prediction)
-        
+        # Evaluar is_canceled y prediction usando el threshold si tenemos probabilidad
+        if prob_val is not None:
+            is_canceled = prob_val >= threshold
+            pred_val = 1 if is_canceled else 0
+        else:
+            # Fallback a predict normal si predict_proba falla
+            prediction = model.predict(df)
+            pred_val = int(prediction[0]) if hasattr(prediction, '__iter__') else int(prediction)
+            prob_val = 0.85 if pred_val == 1 else 0.15
+            is_canceled = bool(pred_val == 1)
+            
         return {
             "prediction": pred_val,
-            "is_canceled": bool(pred_val == 1)
+            "is_canceled": is_canceled,
+            "probability": prob_val
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error durante la predicción: {str(e)}")

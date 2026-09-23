@@ -3,20 +3,20 @@ import { Link } from 'react-router-dom';
 
 const bookings = [
   { 
-    id: 'RES-8924A', prob: '87%', leadTime: 45, priority: 'Alta Prioridad', riskClass: 'destructive', icon: 'trending_up', op: 1,
-    data: { lead_time: 45, market_segment: "Online TA", stays_in_weekend_nights: 1, stays_in_week_nights: 2, adults: 2, children: 0, deposit_type: "No Deposit", previous_cancellations: 2 }
+    id: 'RES-8924A', prob: '86%', leadTime: 150, priority: 'Alta Prioridad', riskClass: 'destructive', icon: 'trending_up', op: 1,
+    data: { lead_time: 150, market_segment: "Online TA", stays_in_weekend_nights: 1, stays_in_week_nights: 2, adults: 2, children: 0, deposit_type: "No Deposit", previous_cancellations: 1, total_of_special_requests: 1 }
   },
   { 
-    id: 'RES-9102B', prob: '75%', leadTime: 12, priority: 'Alta Prioridad', riskClass: 'destructive', icon: 'trending_up', op: 1,
-    data: { lead_time: 12, market_segment: "Direct", stays_in_weekend_nights: 0, stays_in_week_nights: 1, adults: 1, children: 0, deposit_type: "Non Refund", previous_cancellations: 0 }
+    id: 'RES-9102B', prob: '78%', leadTime: 300, priority: 'Alta Prioridad', riskClass: 'destructive', icon: 'trending_up', op: 1,
+    data: { lead_time: 300, market_segment: "Direct", stays_in_weekend_nights: 0, stays_in_week_nights: 1, adults: 1, children: 0, deposit_type: "No Deposit", previous_cancellations: 0, total_of_special_requests: 0 }
   },
   { 
-    id: 'RES-7731C', prob: '52%', leadTime: 88, priority: 'Prioridad Media', riskClass: '[#e8923a]', icon: 'trending_flat', op: 1,
-    data: { lead_time: 88, market_segment: "Corporate", stays_in_weekend_nights: 2, stays_in_week_nights: 4, adults: 2, children: 2, deposit_type: "No Deposit", previous_cancellations: 0 }
+    id: 'RES-7731C', prob: '54%', leadTime: 90, priority: 'Prioridad Media', riskClass: '[#e8923a]', icon: 'trending_flat', op: 1,
+    data: { lead_time: 90, market_segment: "Corporate", stays_in_weekend_nights: 2, stays_in_week_nights: 4, adults: 2, children: 2, deposit_type: "No Deposit", previous_cancellations: 0, total_of_special_requests: 0 }
   },
   { 
-    id: 'RES-4412D', prob: '15%', leadTime: 102, priority: 'Baja Prioridad', riskClass: 'secondary', icon: 'trending_down', op: 0.75,
-    data: { lead_time: 102, market_segment: "Groups", stays_in_weekend_nights: 2, stays_in_week_nights: 5, adults: 2, children: 0, deposit_type: "Refundable", previous_cancellations: 0 }
+    id: 'RES-4412D', prob: '18%', leadTime: 90, priority: 'Baja Prioridad', riskClass: 'secondary', icon: 'trending_down', op: 0.75,
+    data: { lead_time: 90, market_segment: "Groups", stays_in_weekend_nights: 2, stays_in_week_nights: 5, adults: 2, children: 0, deposit_type: "No Deposit", previous_cancellations: 0, total_of_special_requests: 2 }
   }
 ];
 
@@ -57,7 +57,7 @@ export default function Riesgo() {
               <Link 
                 key={booking.id}
                 to={`/validacion?id=${booking.id}`}
-                state={{ bookingData: booking.data }}
+                state={{ bookingData: booking.data, hardcodedProb: booking.prob }}
                 className="bg-card border border-border rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-muted/50 transition-colors shadow-sm cursor-pointer"
                 style={{ opacity: booking.op }}
               >

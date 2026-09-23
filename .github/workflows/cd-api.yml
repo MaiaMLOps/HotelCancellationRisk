@@ -31,6 +31,7 @@ env:
   MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI || 'http://host.docker.internal:5000' }}
   MODEL_NAME: ${{ secrets.MODEL_NAME || 'hotel-cancellation-model' }}
   MODEL_VERSION: ${{ secrets.MODEL_VERSION || 'latest' }}
+  MODEL_THRESHOLD: ${{ vars.MODEL_THRESHOLD || '0.205' }}
 
 jobs:
   deploy-api:
@@ -46,11 +47,12 @@ jobs:
           ENV_MLFLOW_URI: ${{ env.MLFLOW_TRACKING_URI }}
           ENV_MODEL_NAME: ${{ env.MODEL_NAME }}
           ENV_MODEL_VERSION: ${{ env.MODEL_VERSION }}
+          ENV_MODEL_THRESHOLD: ${{ env.MODEL_THRESHOLD }}
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
-          envs: ENV_DEPLOY,ENV_MODEL_SOURCE,ENV_MLFLOW_URI,ENV_MODEL_NAME,ENV_MODEL_VERSION
+          envs: ENV_DEPLOY,ENV_MODEL_SOURCE,ENV_MLFLOW_URI,ENV_MODEL_NAME,ENV_MODEL_VERSION,ENV_MODEL_THRESHOLD
           script: |
             echo "Conectado a la VM exitosamente..."
             echo "Desplegando en ambiente: $ENV_DEPLOY"
@@ -84,10 +86,12 @@ jobs:
                 -e MLFLOW_TRACKING_URI=$ENV_MLFLOW_URI \
                 -e MODEL_NAME=$ENV_MODEL_NAME \
                 -e MODEL_VERSION=$ENV_MODEL_VERSION \
+                -e MODEL_THRESHOLD=$ENV_MODEL_THRESHOLD \
                 api-hotel
             else
               docker run -d --name api-hotel -p 8000:8000 \
                 -e MODEL_SOURCE=$ENV_MODEL_SOURCE \
+                -e MODEL_THRESHOLD=$ENV_MODEL_THRESHOLD \
                 api-hotel
             fi
             
