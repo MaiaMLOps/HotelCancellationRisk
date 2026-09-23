@@ -69,7 +69,7 @@ export default function Validacion() {
   useEffect(() => {
     async function fetchPrediction() {
       try {
-        const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+        const API_URL = "https://54-160-137-22.nip.io";
         const response = await fetch(`${API_URL}/predict`, {
           method: "POST",
           headers: {
