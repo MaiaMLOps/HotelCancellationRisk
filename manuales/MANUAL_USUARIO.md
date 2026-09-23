@@ -43,7 +43,16 @@ La vista Predecir constituye el componente central de inteligencia artificial de
 
 <img width="827" height="346" alt="four" src="https://github.com/user-attachments/assets/bf8ad917-424b-4830-891d-8b29921b9937" />
 
-### 3.4 Alertas / Detalle de reserva (predicción en vivo)
+### 3.4 MLOps (vista de pipeline)
+
+Sección educativa/de transparencia para el evaluador: resume cómo se
+construyó el modelo (control de versiones de datos con DVC, EDA, feature
+engineering, tracking de experimentos en MLflow) y los riesgos que el equipo
+vigila en cada etapa (data drift, data leakage, etc.).
+
+<img width="825" height="485" alt="five" src="https://github.com/user-attachments/assets/e2145fea-c112-48a1-9e17-5b34baca8892" />
+
+### 3.5 Alertas / Detalle de reserva (predicción en vivo)
 
 Aquí el tablero envía los atributos de la reserva a la API del modelo y
 muestra:
@@ -62,14 +71,7 @@ predicción"; ver la sección 5 del Manual de Instalación para diagnosticar.
 
 <img width="825" height="497" alt="six" src="https://github.com/user-attachments/assets/812faa2c-4330-46eb-93f6-730627113393" />
 
-### 3.5 MLOps (vista de pipeline)
 
-Sección educativa/de transparencia para el evaluador: resume cómo se
-construyó el modelo (control de versiones de datos con DVC, EDA, feature
-engineering, tracking de experimentos en MLflow) y los riesgos que el equipo
-vigila en cada etapa (data drift, data leakage, etc.).
-
-<img width="825" height="485" alt="five" src="https://github.com/user-attachments/assets/e2145fea-c112-48a1-9e17-5b34baca8892" />
 
 ## 4. Cómo interpretar una predicción
 
