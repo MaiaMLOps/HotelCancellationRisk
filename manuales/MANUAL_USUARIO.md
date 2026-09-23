@@ -20,28 +20,30 @@ El tablero tiene una barra superior (o inferior, en móvil) con 4 secciones:
 |-------------|--------------|-------------|
 | **Tablero**     | `/`          | Resumen general: reservas en riesgo, tasa de cancelación global y PR-AUC del modelo. |
 | **Reservas**    | `/riesgo`    | Listado de reservas priorizadas por probabilidad de cancelación, con búsqueda por ID. |
+| **Predecir**    | `/predict`   | Formulario que reúne información relevante de la reserva  para predecir el riesgo. |
 | **MLOps**       | `/mlops`     | Vista explicativa del pipeline de datos y modelamiento (dataset, EDA, features, MLflow, API), pensada para el equipo técnico. |
 | **Alertas**     | `/validacion`| Detalle de una reserva puntual: predicción del modelo y acciones sugeridas. |
 
-<img width="1251" height="589" alt="first" src="https://github.com/user-attachments/assets/b0c5f157-eae5-4337-8ded-1822ce2ee990" /> 
+<img width="1288" height="602" alt="first" src="https://github.com/user-attachments/assets/08b7b63c-4816-4594-9663-4206e7cf4204" /> 
 
 ### 3.1 Tablero (resumen)
 
-Muestra tres indicadores clave (KPI): reservas en riesgo, tasa de cancelación
-y desempeño del modelo (PR-AUC), junto con gráficos de monitoreo.
+La vista Tablero constituye el punto de entrada para el análisis general del comportamiento de las reservas y del riesgo de cancelación. Su objetivo es presentar, de manera resumida y visual, los principales indicadores obtenidos a partir de los datos históricos y permitir al usuario tener una visión general del estado de las reservas antes de profundizar en casos particulares. En esta vista se concentran los principales indicadores clave de desempeño (KPIs) relacionados con el volumen de reservas, las cancelaciones y el comportamiento general del modelo de riesgo. Estos indicadores permiten identificar rápidamente la magnitud del problema y establecer un contexto para la interpretación de las predicciones generadas por el modelo.
 
-<img width="831" height="169" alt="second" src="https://github.com/user-attachments/assets/60946c87-cc36-4493-84a1-42094cd58933" /> 
+<img width="825" height="551" alt="second" src="https://github.com/user-attachments/assets/ea22d734-b593-4c04-9af1-508751bffcd7" />
 
 ### 3.2 Reservas de riesgo priorizadas
 
-Lista reservas ordenadas por prioridad (Alta / Media / Baja), con su
-probabilidad estimada de cancelación y días de anticipación (lead time).
-Puede buscar una reserva por su ID. Al hacer clic sobre una reserva se abre
-su detalle en la sección **Alertas**.
+La vista Reservas permite pasar del análisis agregado del Tablero a una exploración más detallada de las reservas disponibles en el conjunto de datos. Su finalidad es facilitar la consulta y segmentación de los registros para identificar características particulares asociadas con las reservas y su comportamiento frente a la cancelación. Lista reservas ordenadas por prioridad (Alta / Media / Baja), con su probabilidad estimada de cancelación y días de anticipación (lead time). Puede buscar una reserva por su ID. Al hacer clic sobre una reserva se abre su detalle en la sección **Alertas**. 
 
-<img width="825" height="195" alt="third" src="https://github.com/user-attachments/assets/a9c2e797-8576-45ed-8676-77ea82476a9b" />
+<img width="825" height="379" alt="third" src="https://github.com/user-attachments/assets/4ff89700-83af-48d9-9f99-b79951798500" />
 
-### 3.3 Alertas / Detalle de reserva (predicción en vivo)
+### 3.3 Predecir
+La vista Predecir constituye el componente central de inteligencia artificial de la aplicación. Su objetivo es permitir que un usuario ingrese las características de una reserva y obtenga una estimación del riesgo de que esta sea cancelada. El proceso comienza mediante un formulario en el que se introducen las variables relevantes de la reserva. Estas características corresponden a las variables utilizadas durante el entrenamiento del modelo, de manera que la información suministrada por el usuario pueda atravesar el mismo flujo de transformación empleado durante el desarrollo del sistema. Una vez diligenciada la información, la aplicación ejecuta el proceso de inferencia. Internamente, los datos pasan por la etapa de preprocesamiento, que incluye el tratamiento de variables numéricas y categóricas, la gestión de valores faltantes y la transformación de las variables al formato esperado por el modelo.
+
+<img width="827" height="346" alt="four" src="https://github.com/user-attachments/assets/bf8ad917-424b-4830-891d-8b29921b9937" />
+
+### 3.4 Alertas / Detalle de reserva (predicción en vivo)
 
 Aquí el tablero envía los atributos de la reserva a la API del modelo y
 muestra:
@@ -58,16 +60,16 @@ muestra:
 Si la API no está disponible, la sección mostrará "Error al obtener
 predicción"; ver la sección 5 del Manual de Instalación para diagnosticar.
 
-<img width="833" height="360" alt="four" src="https://github.com/user-attachments/assets/2c50ce14-4539-4ef4-891a-881d8dd10381" />
+<img width="825" height="497" alt="six" src="https://github.com/user-attachments/assets/812faa2c-4330-46eb-93f6-730627113393" />
 
-### 3.4 MLOps (vista de pipeline)
+### 3.5 MLOps (vista de pipeline)
 
 Sección educativa/de transparencia para el evaluador: resume cómo se
 construyó el modelo (control de versiones de datos con DVC, EDA, feature
 engineering, tracking de experimentos en MLflow) y los riesgos que el equipo
 vigila en cada etapa (data drift, data leakage, etc.).
 
-<img width="825" height="482" alt="five" src="https://github.com/user-attachments/assets/b41d4584-7450-485e-8d46-b2f2ea6369e2" />
+<img width="825" height="485" alt="five" src="https://github.com/user-attachments/assets/e2145fea-c112-48a1-9e17-5b34baca8892" />
 
 ## 4. Cómo interpretar una predicción
 
