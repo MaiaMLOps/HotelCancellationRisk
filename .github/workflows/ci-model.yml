@@ -1,0 +1,217 @@
+name: CI Pipeline - Lightning AI Training
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "model/config.yml"
+      - "model/pipeline.py"
+      - "model/processing/**"
+      - "model/experiment.py"
+      - "model/evaluate.py"
+      - "model/experiments/**"
+      - "data/dataset.csv.dvc"
+      - "requirements/modeling.txt"
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "model/config.yml"
+      - "model/pipeline.py"
+      - "model/processing/**"
+      - "model/experiment.py"
+      - "model/evaluate.py"
+      - "model/experiments/**"
+      - "data/dataset.csv.dvc"
+      - "requirements/modeling.txt"
+  workflow_dispatch:
+    inputs:
+      force_full_training:
+        description: 'Forzar entrenamiento completo (Tuning, Eval, Log)'
+        type: boolean
+        default: true
+
+jobs:
+  lint-and-test:
+    name: Code Quality & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Linting and Test Tools
+        run: pip install ruff mypy pandas-stubs pytest
+      - name: Run Ruff Linter
+        run: ruff check .
+      - name: Run Ruff Formatter Check
+        run: ruff format --check .
+      - name: Run MyPy Static Type Check
+        run: mypy model/ --ignore-missing-imports
+
+  train-model:
+    name: Model Training (Lightning AI)
+    needs: lint-and-test  # Solo entrena si el código está limpio y pasa tests
+    runs-on: ubuntu-latest
+    concurrency:
+      group: lightning-studio-${{ github.ref }}
+      cancel-in-progress: true
+    
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install Lightning SDK
+        run: |
+          python -m pip install --upgrade pip
+          pip install lightning-sdk
+          
+      - name: Start Lightning AI Studio and Train Model
+        env:
+          LIGHTNING_AI_USERNAME: ${{ secrets.LIGHTNING_AI_USERNAME }}
+          LIGHTNING_USER_ID: ${{ secrets.LIGHTNING_USER_ID }}
+          LIGHTNING_API_KEY: ${{ secrets.LIGHTNING_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          # Credenciales AWS para DVC
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+          # Servidor de MLflow
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          python -u -c '
+          import os, re, sys
+          from lightning_sdk import Studio, Machine
+
+          def run_cmd(cmd):
+              out, code = studio.run_with_exit_code(cmd)
+              if code != 0:
+                  print(f"Error ({code}) executing: {cmd}\nOutput: {out}")
+                  sys.exit(code)
+              return out
+
+          user = os.environ.get("LIGHTNING_AI_USERNAME")
+          branch = os.environ.get("GITHUB_REF_NAME", "main")
+          ref = os.environ.get("GITHUB_REF", "refs/heads/main")
+          branch_studio_name = re.sub("[^a-zA-Z0-9-]", "-", branch)[:30]
+          
+          print(f"Starting Lightning AI Studio ({branch_studio_name}) on CPU...")
+          studio = Studio(name=branch_studio_name, teamspace="Personal", user=user)
+          studio.start(Machine.CPU)
+
+          print("Cloning repository inside the Studio...")
+          token = os.environ.get("GITHUB_TOKEN")
+          repo = os.environ.get("GITHUB_REPOSITORY")
+          repo_name = repo.split("/")[-1]
+          
+          if token:
+              repo_url = f"https://x-access-token:{token}@github.com/{repo}.git"
+          else:
+              repo_url = f"https://github.com/{repo}.git"
+
+          clone_or_pull_cmd = (
+              f"if [ -d \"{repo_name}/.git\" ]; then "
+              f"  echo \"Repository already exists. Syncing...\"; "
+              f"  cd {repo_name} && git fetch origin {ref} && git checkout FETCH_HEAD && git clean -fd --exclude=checkpoints/ --exclude=.dvc/cache/; "
+              f"else "
+              f"  echo \"Repository does not exist. Cloning...\"; "
+              f"  git clone {repo_url} {repo_name} && cd {repo_name} && git fetch origin {ref} && git checkout FETCH_HEAD; "
+              f"fi"
+          )
+          run_cmd(clone_or_pull_cmd)
+          
+          print("Installing project requirements using uv...")
+          run_cmd("pip install uv")
+          run_cmd(f"cd {repo_name} && uv pip install --system -r requirements/modeling.txt -r requirements/dvc.txt")
+          
+          print("Pulling data with DVC...")
+          aws_access = os.environ.get("AWS_ACCESS_KEY_ID", "")
+          aws_secret = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
+          aws_session = os.environ.get("AWS_SESSION_TOKEN", "")
+          
+          dvc_env = f"AWS_ACCESS_KEY_ID={aws_access} AWS_SECRET_ACCESS_KEY={aws_secret} AWS_SESSION_TOKEN={aws_session}"
+          run_cmd(f"cd {repo_name} && {dvc_env} dvc pull --force --allow-missing")
+          
+          event_name = os.environ.get("GITHUB_EVENT_NAME", "")
+          
+          if event_name == "pull_request":
+              print("Ejecutando validacion rapida (PR)...")
+              results = run_cmd(f"cd {repo_name} && python -m model.experiment --experiment model/experiments/logistic_default.yml")
+              print("Resultados validacion:")
+              print(results)
+          elif event_name == "push":
+              print("Ejecutando evaluacion rapida con hiperparametros guardados (Push a main)...")
+              mlflow_uri = os.environ.get("MLFLOW_TRACKING_URI", "")
+              
+              cmds = [
+                  # Se salta el tuning pesado, asume que random_forest_tuned.yml ya tiene parametros
+                  "python -m model.threshold --experiment model/experiments/random_forest_tuned.yml --save model/thresholds/random_forest_tuned.yml",
+                  "python -m model.final_evaluate --experiment model/experiments/random_forest_tuned.yml --threshold model/thresholds/random_forest_tuned.yml --save model/results/random_forest_tuned_test.yml",
+              ]
+              
+              if mlflow_uri:
+                  cmds.append(f"MLFLOW_TRACKING_URI={mlflow_uri} python -m model.log_final --experiment model/experiments/random_forest_tuned.yml --threshold model/thresholds/random_forest_tuned.yml --results model/results/random_forest_tuned_test.yml")
+              else:
+                  print("MLFLOW_TRACKING_URI vacio: Omitiendo registro en MLflow.")
+              
+              for cmd in cmds:
+                  print(f"\\nEjecutando: {cmd}")
+                  res = run_cmd(f"cd {repo_name} && {cmd}")
+                  print(res)
+          else:
+              print("Ejecutando entrenamiento COMPLETO con tuning (Manual/Dispatch)...")
+              mlflow_uri = os.environ.get("MLFLOW_TRACKING_URI", "")
+              
+              cmds = [
+                  "python -m model.tune --tuning model/tuning/random_forest.yml --save-best model/experiments/random_forest_tuned.yml",
+                  "python -m model.threshold --experiment model/experiments/random_forest_tuned.yml --save model/thresholds/random_forest_tuned.yml",
+                  "python -m model.final_evaluate --experiment model/experiments/random_forest_tuned.yml --threshold model/thresholds/random_forest_tuned.yml --save model/results/random_forest_tuned_test.yml",
+              ]
+              
+              if mlflow_uri:
+                  cmds.append(f"MLFLOW_TRACKING_URI={mlflow_uri} python -m model.log_final --experiment model/experiments/random_forest_tuned.yml --threshold model/thresholds/random_forest_tuned.yml --results model/results/random_forest_tuned_test.yml")
+              else:
+                  print("MLFLOW_TRACKING_URI vacio: Omitiendo registro en MLflow.")
+              
+              for cmd in cmds:
+                  print(f"\\nEjecutando: {cmd}")
+                  res = run_cmd(f"cd {repo_name} && {cmd}")
+                  print(res)
+          '
+          
+      - name: Stop Lightning AI Studio (On Success, Failure or Cancel)
+        if: always()
+        env:
+          LIGHTNING_AI_USERNAME: ${{ secrets.LIGHTNING_AI_USERNAME }}
+          LIGHTNING_USER_ID: ${{ secrets.LIGHTNING_USER_ID }}
+          LIGHTNING_API_KEY: ${{ secrets.LIGHTNING_API_KEY }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_REF: ${{ github.ref }}
+        run: |
+          python -c '
+          import os, re
+          from lightning_sdk import Studio
+          
+          user = os.environ.get("LIGHTNING_AI_USERNAME")
+          branch = os.environ.get("GITHUB_REF_NAME", "main")
+          ref = os.environ.get("GITHUB_REF", "refs/heads/main")
+          branch_studio_name = re.sub("[^a-zA-Z0-9-]", "-", branch)[:30]
+          
+          print(f"Asegurando el apagado del Studio ({branch_studio_name})...")
+          try:
+              studio = Studio(name=branch_studio_name, teamspace="Personal", user=user)
+              studio.stop()
+              print("Studio detenido exitosamente.")
+          except Exception as e:
+              print(f"No se pudo detener el Studio o ya estaba detenido: {e}")
+          '

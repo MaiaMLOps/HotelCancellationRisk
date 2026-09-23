@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 const navItems = [
   { path: '/', label: 'Tablero', icon: 'dashboard' },
   { path: '/riesgo', label: 'Reservas', icon: 'list_alt' },
+  { path: '/prediccion', label: 'Predecir', icon: 'online_prediction' },
   { path: '/mlops', label: 'MLOps', icon: 'settings_input_component' },
   { path: '/validacion', label: 'Alertas', icon: 'warning' },
 ];

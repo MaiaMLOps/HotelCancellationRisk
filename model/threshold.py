@@ -20,7 +20,6 @@ from model.processing.split import (
     load_dataset,
 )
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -47,13 +46,9 @@ def generate_oof_predictions(
         config,
     )
 
-    development_mask = metadata[
-        "partition"
-    ].eq("development")
+    development_mask = metadata["partition"].eq("development")
 
-    development_indices = np.flatnonzero(
-        development_mask.to_numpy()
-    )
+    development_indices = np.flatnonzero(development_mask.to_numpy())
 
     oof_probability = np.full(
         len(df),
@@ -64,16 +59,13 @@ def generate_oof_predictions(
     n_folds = config["split"]["cv_n_folds"]
 
     for fold in range(n_folds):
-
-        train_mask = (
-            metadata["partition"].eq("development")
-            & ~metadata["cv_fold"].eq(fold)
+        train_mask = metadata["partition"].eq("development") & ~metadata["cv_fold"].eq(
+            fold
         )
 
-        validation_mask = (
-            metadata["partition"].eq("development")
-            & metadata["cv_fold"].eq(fold)
-        )
+        validation_mask = metadata["partition"].eq("development") & metadata[
+            "cv_fold"
+        ].eq(fold)
 
         pipeline = build_model_pipeline(
             model_name=experiment["model"],
@@ -81,44 +73,28 @@ def generate_oof_predictions(
             params_override=experiment["params"],
         )
 
-        print(
-            f"Training fold {fold + 1}/{n_folds}..."
-        )
+        print(f"Training fold {fold + 1}/{n_folds}...")
 
         pipeline.fit(
             X.loc[train_mask],
             y.loc[train_mask],
         )
 
-        oof_probability[
-            np.flatnonzero(
-                validation_mask.to_numpy()
-            )
-        ] = pipeline.predict_proba(
-            X.loc[validation_mask]
-        )[:, 1]
-
-    probabilities = oof_probability[
-        development_indices
-    ]
-
-    if np.isnan(probabilities).any():
-        raise RuntimeError(
-            "Some development observations have no OOF prediction."
+        oof_probability[np.flatnonzero(validation_mask.to_numpy())] = (
+            pipeline.predict_proba(X.loc[validation_mask])[:, 1]
         )
 
-    y_dev = (
-        y.loc[development_mask]
-        .reset_index(drop=True)
-    )
+    probabilities = oof_probability[development_indices]
 
-    weights_dev = (
-        metadata.loc[
-            development_mask,
-            "pattern_weight",
-        ]
-        .reset_index(drop=True)
-    )
+    if np.isnan(probabilities).any():
+        raise RuntimeError("Some development observations have no OOF prediction.")
+
+    y_dev = y.loc[development_mask].reset_index(drop=True)
+
+    weights_dev = metadata.loc[
+        development_mask,
+        "pattern_weight",
+    ].reset_index(drop=True)
 
     return (
         y_dev,
@@ -142,10 +118,7 @@ def evaluate_thresholds(
     rows = []
 
     for threshold in thresholds:
-
-        y_pred = (
-            probabilities >= threshold
-        ).astype(int)
+        y_pred = (probabilities >= threshold).astype(int)
 
         rows.append(
             {
@@ -198,21 +171,11 @@ def save_threshold_result(
     result = {
         "experiment": str(experiment_path),
         "selection_metric": "f2",
-        "threshold": float(
-            best_row["threshold"]
-        ),
-        "oof_f2": float(
-            best_row["f2"]
-        ),
-        "oof_precision": float(
-            best_row["precision"]
-        ),
-        "oof_recall": float(
-            best_row["recall"]
-        ),
-        "oof_pattern_f2": float(
-            best_row["pattern_f2"]
-        ),
+        "threshold": float(best_row["threshold"]),
+        "oof_f2": float(best_row["f2"]),
+        "oof_precision": float(best_row["precision"]),
+        "oof_recall": float(best_row["recall"]),
+        "oof_pattern_f2": float(best_row["pattern_f2"]),
     }
 
     with path.open(
@@ -226,9 +189,7 @@ def save_threshold_result(
             allow_unicode=True,
         )
 
-    print(
-        f"\nThreshold result saved to: {path}"
-    )
+    print(f"\nThreshold result saved to: {path}")
 
 
 def run_threshold_search(
@@ -238,11 +199,7 @@ def run_threshold_search(
     Generate OOF predictions and select the threshold maximizing
     conventional F2 on development.
     """
-    y_dev, probabilities, weights = (
-        generate_oof_predictions(
-            experiment_path
-        )
-    )
+    y_dev, probabilities, weights = generate_oof_predictions(experiment_path)
 
     # Dense enough for this prototype while remaining simple
     # and completely deterministic.
@@ -265,21 +222,11 @@ def run_threshold_search(
     print("\n" + "=" * 60)
     print("THRESHOLD SELECTION — DEVELOPMENT OOF")
     print("=" * 60)
-    print(
-        f"Best threshold : {best['threshold']:.3f}"
-    )
-    print(
-        f"OOF F2         : {best['f2']:.4f}"
-    )
-    print(
-        f"OOF Recall     : {best['recall']:.4f}"
-    )
-    print(
-        f"OOF Precision  : {best['precision']:.4f}"
-    )
-    print(
-        f"Pattern F2     : {best['pattern_f2']:.4f}"
-    )
+    print(f"Best threshold : {best['threshold']:.3f}")
+    print(f"OOF F2         : {best['f2']:.4f}")
+    print(f"OOF Recall     : {best['recall']:.4f}")
+    print(f"OOF Precision  : {best['precision']:.4f}")
+    print(f"Pattern F2     : {best['pattern_f2']:.4f}")
 
     return results, best
 
@@ -287,26 +234,20 @@ def run_threshold_search(
 def parse_args():
     parser = argparse.ArgumentParser(
         description=(
-            "Select a decision threshold using "
-            "out-of-fold development predictions."
+            "Select a decision threshold using out-of-fold development predictions."
         )
     )
 
     parser.add_argument(
         "--experiment",
         required=True,
-        help=(
-            "Experiment YAML used to build the model."
-        ),
+        help=("Experiment YAML used to build the model."),
     )
 
     parser.add_argument(
         "--save",
         required=False,
-        help=(
-            "Optional YAML path where the selected "
-            "threshold will be persisted."
-        ),
+        help=("Optional YAML path where the selected threshold will be persisted."),
     )
 
     return parser.parse_args()
@@ -315,9 +256,7 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    _, best = run_threshold_search(
-        args.experiment
-    )
+    _, best = run_threshold_search(args.experiment)
 
     if args.save:
         save_threshold_result(

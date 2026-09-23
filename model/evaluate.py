@@ -27,7 +27,6 @@ from model.processing.split import (
     load_dataset,
 )
 
-
 METRIC_COLUMNS = [
     "average_precision",
     "pr_auc",
@@ -77,9 +76,7 @@ def calculate_metrics(
     dict[str, float]
         Average Precision, F2, precision, recall and F1.
     """
-    y_pred = (
-        y_probability >= threshold
-    ).astype(int)
+    y_pred = (y_probability >= threshold).astype(int)
 
     precision_curve, recall_curve, _ = precision_recall_curve(
         y_true,
@@ -167,33 +164,20 @@ def evaluate_cv(
         config,
     )
 
-    threshold = config[
-        "evaluation"
-    ]["threshold"]
+    threshold = config["evaluation"]["threshold"]
 
-    n_folds = config[
-        "split"
-    ]["cv_n_folds"]
+    n_folds = config["split"]["cv_n_folds"]
 
-    fold_results: list[
-        dict[str, float | int]
-    ] = []
+    fold_results: list[dict[str, float | int]] = []
 
     for fold in range(n_folds):
-
-        train_mask = (
-            metadata["partition"].eq(
-                "development"
-            )
-            & ~metadata["cv_fold"].eq(fold)
+        train_mask = metadata["partition"].eq("development") & ~metadata["cv_fold"].eq(
+            fold
         )
 
-        validation_mask = (
-            metadata["partition"].eq(
-                "development"
-            )
-            & metadata["cv_fold"].eq(fold)
-        )
+        validation_mask = metadata["partition"].eq("development") & metadata[
+            "cv_fold"
+        ].eq(fold)
 
         pipeline = build_model_pipeline(
             model_name=model_name,
@@ -208,15 +192,9 @@ def evaluate_cv(
             y.loc[train_mask],
         )
 
-        fit_seconds = (
-            perf_counter() - start
-        )
+        fit_seconds = perf_counter() - start
 
-        probabilities = (
-            pipeline.predict_proba(
-                X.loc[validation_mask]
-            )[:, 1]
-        )
+        probabilities = pipeline.predict_proba(X.loc[validation_mask])[:, 1]
 
         # --------------------------------------------------------------
         # Conventional evaluation:
@@ -244,19 +222,11 @@ def evaluate_cv(
 
         result = {
             "fold": fold,
-            "train_rows": int(
-                train_mask.sum()
-            ),
-            "validation_rows": int(
-                validation_mask.sum()
-            ),
+            "train_rows": int(train_mask.sum()),
+            "validation_rows": int(validation_mask.sum()),
             "fit_seconds": fit_seconds,
             **reservation_metrics,
-            **{
-                f"pattern_{metric}": value
-                for metric, value
-                in pattern_metrics.items()
-            },
+            **{f"pattern_{metric}": value for metric, value in pattern_metrics.items()},
         }
 
         fold_results.append(result)
@@ -271,35 +241,16 @@ def evaluate_cv(
             f"time={fit_seconds:.1f}s"
         )
 
-    results_df = pd.DataFrame(
-        fold_results
-    )
+    results_df = pd.DataFrame(fold_results)
 
     summary: dict[str, float] = {}
 
     for metric in METRIC_COLUMNS:
+        summary[f"cv_{metric}_mean"] = float(results_df[metric].mean())
 
-        summary[
-            f"cv_{metric}_mean"
-        ] = float(
-            results_df[metric].mean()
-        )
+        summary[f"cv_{metric}_std"] = float(results_df[metric].std(ddof=1))
 
-        summary[
-            f"cv_{metric}_std"
-        ] = float(
-            results_df[metric].std(
-                ddof=1
-            )
-        )
-
-    summary[
-        "cv_fit_seconds_mean"
-    ] = float(
-        results_df[
-            "fit_seconds"
-        ].mean()
-    )
+    summary["cv_fit_seconds_mean"] = float(results_df["fit_seconds"].mean())
 
     return results_df, summary
 
@@ -319,18 +270,10 @@ def print_cv_summary(
         params_override=params_override,
     )
 
-    print(
-        "\n" + "=" * 60
-    )
-    print(
-        f"MODEL: {model_name}"
-    )
-    print(
-        f"PARAMETERS: {params}"
-    )
-    print(
-        "=" * 60
-    )
+    print("\n" + "=" * 60)
+    print(f"MODEL: {model_name}")
+    print(f"PARAMETERS: {params}")
+    print("=" * 60)
 
     print(
         "Average Precision : "
@@ -374,9 +317,7 @@ def print_cv_summary(
         f"{summary['cv_f1_std']:.4f}"
     )
 
-    print(
-        "\nPattern-weighted sensitivity:"
-    )
+    print("\nPattern-weighted sensitivity:")
 
     print(
         "Average Precision : "
@@ -426,23 +367,15 @@ def parse_args():
     Parse command-line arguments.
     """
     parser = argparse.ArgumentParser(
-        description=(
-            "Evaluate hotel cancellation "
-            "models with grouped CV."
-        )
+        description=("Evaluate hotel cancellation models with grouped CV.")
     )
 
     parser.add_argument(
         "--model",
-        choices=(
-            sorted(SUPPORTED_MODELS)
-            + ["all"]
-        ),
+        choices=(sorted(SUPPORTED_MODELS) + ["all"]),
         default="all",
         help=(
-            "Model to evaluate. "
-            "Use 'all' to evaluate all "
-            "currently supported models."
+            "Model to evaluate. Use 'all' to evaluate all currently supported models."
         ),
     )
 
@@ -450,22 +383,16 @@ def parse_args():
 
 
 if __name__ == "__main__":
-
     args = parse_args()
 
     config = load_config()
 
     if args.model == "all":
-        models_to_run = sorted(
-            SUPPORTED_MODELS
-        )
+        models_to_run = sorted(SUPPORTED_MODELS)
     else:
-        models_to_run = [
-            args.model
-        ]
+        models_to_run = [args.model]
 
     for model_name in models_to_run:
-
         _, summary = evaluate_cv(
             model_name=model_name,
             config=config,

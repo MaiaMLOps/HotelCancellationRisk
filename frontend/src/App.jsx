@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import MLOps from './pages/MLOps';
 import Riesgo from './pages/Riesgo';
 import Validacion from './pages/Validacion';
+import Prediccion from './pages/Prediccion';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route path="mlops" element={<MLOps />} />
           <Route path="riesgo" element={<Riesgo />} />
           <Route path="validacion" element={<Validacion />} />
+          <Route path="prediccion" element={<Prediccion />} />
         </Route>
       </Routes>
     </BrowserRouter>

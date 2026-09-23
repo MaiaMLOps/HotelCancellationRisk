@@ -5,7 +5,6 @@ import pandas as pd
 import yaml
 from sklearn.model_selection import StratifiedGroupKFold
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = PROJECT_ROOT / "model" / "config.yml"
 
@@ -24,10 +23,7 @@ def load_dataset(config: dict) -> pd.DataFrame:
 
 def get_feature_columns(config: dict) -> list[str]:
     """Return the complete ordered list of predictor variables."""
-    return (
-        config["features"]["categorical"]
-        + config["features"]["numerical"]
-    )
+    return config["features"]["categorical"] + config["features"]["numerical"]
 
 
 def build_pattern_groups(
@@ -43,11 +39,7 @@ def build_pattern_groups(
     normalized = X.copy()
 
     for column in categorical_columns:
-        normalized[column] = (
-            normalized[column]
-            .astype("string")
-            .fillna("__MISSING__")
-        )
+        normalized[column] = normalized[column].astype("string").fillna("__MISSING__")
 
     groups = pd.util.hash_pandas_object(
         normalized,
@@ -59,9 +51,7 @@ def build_pattern_groups(
     n_unique_hashes = groups.nunique()
 
     if n_unique_patterns != n_unique_hashes:
-        raise RuntimeError(
-            "Hash collision detected while creating pattern groups."
-        )
+        raise RuntimeError("Hash collision detected while creating pattern groups.")
 
     return groups
 
@@ -101,15 +91,11 @@ def create_partitions(
 
     outer_fold = np.full(len(df), -1, dtype=np.int16)
 
-    for fold, (_, holdout_idx) in enumerate(
-        outer_splitter.split(X, y, groups)
-    ):
+    for fold, (_, holdout_idx) in enumerate(outer_splitter.split(X, y, groups)):
         outer_fold[holdout_idx] = fold
 
     if np.any(outer_fold == -1):
-        raise RuntimeError(
-            "Some observations were not assigned to an outer fold."
-        )
+        raise RuntimeError("Some observations were not assigned to an outer fold.")
 
     test_fold = split_config["test_fold"]
 
@@ -157,9 +143,7 @@ def create_partitions(
     # ------------------------------------------------------------------
     # 3. Pattern frequency and sensitivity-analysis weights
     # ------------------------------------------------------------------
-    pattern_frequency = groups.map(
-        groups.value_counts()
-    )
+    pattern_frequency = groups.map(groups.value_counts())
 
     metadata = pd.DataFrame(
         {
@@ -187,11 +171,7 @@ def print_partition_summary(
     for partition_name in ["development", "test"]:
         mask = metadata["partition"].eq(partition_name)
 
-        group_sizes = (
-            metadata.loc[mask]
-            .groupby("group_id")
-            .size()
-        )
+        group_sizes = metadata.loc[mask].groupby("group_id").size()
 
         print(
             f"{partition_name:12s} | "
@@ -221,15 +201,11 @@ def print_partition_summary(
 
     overlap = development_groups & test_groups
 
-    print(
-        f"\nOverlapping groups between development and test: "
-        f"{len(overlap)}"
-    )
+    print(f"\nOverlapping groups between development and test: {len(overlap)}")
 
     if overlap:
         raise RuntimeError(
-            "At least one predictor pattern appears in both "
-            "development and test."
+            "At least one predictor pattern appears in both development and test."
         )
 
     # Cross-validation diagnostics.
@@ -237,18 +213,10 @@ def print_partition_summary(
 
     development_mask = metadata["partition"].eq("development")
 
-    for fold in sorted(
-        metadata.loc[development_mask, "cv_fold"].unique()
-    ):
-        validation_mask = (
-            development_mask
-            & metadata["cv_fold"].eq(fold)
-        )
+    for fold in sorted(metadata.loc[development_mask, "cv_fold"].unique()):
+        validation_mask = development_mask & metadata["cv_fold"].eq(fold)
 
-        training_mask = (
-            development_mask
-            & ~metadata["cv_fold"].eq(fold)
-        )
+        training_mask = development_mask & ~metadata["cv_fold"].eq(fold)
 
         validation_groups = set(
             metadata.loc[
@@ -267,9 +235,7 @@ def print_partition_summary(
         fold_overlap = validation_groups & training_groups
 
         validation_group_sizes = (
-            metadata.loc[validation_mask]
-            .groupby("group_id")
-            .size()
+            metadata.loc[validation_mask].groupby("group_id").size()
         )
 
         print(
@@ -286,9 +252,7 @@ def print_partition_summary(
         )
 
         if fold_overlap:
-            raise RuntimeError(
-                f"Group leakage detected in CV fold {fold}."
-            )
+            raise RuntimeError(f"Group leakage detected in CV fold {fold}.")
 
 
 if __name__ == "__main__":
@@ -302,10 +266,7 @@ if __name__ == "__main__":
 
     print(f"Dataset rows: {len(dataset)}")
     print(f"Predictors: {X.shape[1]}")
-    print(
-        "Unique predictor patterns: "
-        f"{metadata['group_id'].nunique()}"
-    )
+    print(f"Unique predictor patterns: {metadata['group_id'].nunique()}")
 
     print_partition_summary(
         y,

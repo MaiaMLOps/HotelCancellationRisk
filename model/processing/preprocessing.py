@@ -28,11 +28,7 @@ def _categorical_to_string(
     else:
         frame = pd.DataFrame(X)
 
-    return (
-        frame.astype("string")
-        .fillna(missing_value)
-        .astype(str)
-    )
+    return frame.astype("string").fillna(missing_value).astype(str)
 
 
 def build_preprocessor(config: dict, model_name: str = "") -> ColumnTransformer:

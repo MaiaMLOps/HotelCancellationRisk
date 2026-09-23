@@ -15,7 +15,6 @@ from model.processing.split import (
     load_dataset,
 )
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -33,9 +32,7 @@ def load_threshold(path: str | Path) -> dict:
         threshold_config = yaml.safe_load(file)
 
     if threshold_config is None:
-        raise ValueError(
-            f"Threshold file is empty: {threshold_path}"
-        )
+        raise ValueError(f"Threshold file is empty: {threshold_path}")
 
     return threshold_config
 
@@ -59,17 +56,11 @@ def evaluate_test(
         config,
     )
 
-    development_mask = metadata[
-        "partition"
-    ].eq("development")
+    development_mask = metadata["partition"].eq("development")
 
-    test_mask = metadata[
-        "partition"
-    ].eq("test")
+    test_mask = metadata["partition"].eq("test")
 
-    threshold = float(
-        threshold_config["threshold"]
-    )
+    threshold = float(threshold_config["threshold"])
 
     pipeline = build_model_pipeline(
         model_name=experiment["model"],
@@ -84,9 +75,7 @@ def evaluate_test(
         y.loc[development_mask],
     )
 
-    probabilities = pipeline.predict_proba(
-        X.loc[test_mask]
-    )[:, 1]
+    probabilities = pipeline.predict_proba(X.loc[test_mask])[:, 1]
 
     reservation_metrics = calculate_metrics(
         y_true=y.loc[test_mask],
@@ -104,9 +93,7 @@ def evaluate_test(
         ],
     )
 
-    predictions = (
-        probabilities >= threshold
-    ).astype(int)
+    predictions = (probabilities >= threshold).astype(int)
 
     tn, fp, fn, tp = confusion_matrix(
         y.loc[test_mask],
@@ -115,10 +102,7 @@ def evaluate_test(
 
     results = {
         "threshold": threshold,
-        **{
-            f"test_{key}": float(value)
-            for key, value in reservation_metrics.items()
-        },
+        **{f"test_{key}": float(value) for key, value in reservation_metrics.items()},
         **{
             f"test_pattern_{key}": float(value)
             for key, value in pattern_metrics.items()
@@ -135,45 +119,18 @@ def evaluate_test(
 
     print(f"Experiment        : {experiment['name']}")
     print(f"Threshold         : {threshold:.3f}")
-    print(
-        f"Average Precision : "
-        f"{results['test_average_precision']:.4f}"
-    )
-    print(
-        f"PR-AUC            : "
-        f"{results['test_pr_auc']:.4f}"
-    )
-    print(
-        f"F2                : "
-        f"{results['test_f2']:.4f}"
-    )
-    print(
-        f"Recall            : "
-        f"{results['test_recall']:.4f}"
-    )
-    print(
-        f"Precision         : "
-        f"{results['test_precision']:.4f}"
-    )
-    print(
-        f"F1                : "
-        f"{results['test_f1']:.4f}"
-    )
+    print(f"Average Precision : {results['test_average_precision']:.4f}")
+    print(f"PR-AUC            : {results['test_pr_auc']:.4f}")
+    print(f"F2                : {results['test_f2']:.4f}")
+    print(f"Recall            : {results['test_recall']:.4f}")
+    print(f"Precision         : {results['test_precision']:.4f}")
+    print(f"F1                : {results['test_f1']:.4f}")
 
     print("\nPattern-weighted sensitivity:")
 
-    print(
-        f"Average Precision : "
-        f"{results['test_pattern_average_precision']:.4f}"
-    )
-    print(
-        f"PR-AUC            : "
-        f"{results['test_pattern_pr_auc']:.4f}"
-    )
-    print(
-        f"F2                : "
-        f"{results['test_pattern_f2']:.4f}"
-    )
+    print(f"Average Precision : {results['test_pattern_average_precision']:.4f}")
+    print(f"PR-AUC            : {results['test_pattern_pr_auc']:.4f}")
+    print(f"F2                : {results['test_pattern_f2']:.4f}")
 
     print("\nConfusion matrix counts:")
     print(f"TN={tn}  FP={fp}")

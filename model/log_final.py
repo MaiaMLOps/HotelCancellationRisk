@@ -17,7 +17,6 @@ from model.experiment import (
 from model.pipeline import get_model_params
 from model.processing.split import load_config
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -29,9 +28,7 @@ def load_yaml(path: str | Path) -> dict[str, Any]:
         file_path = PROJECT_ROOT / file_path
 
     if not file_path.exists():
-        raise FileNotFoundError(
-            f"File not found: {file_path}"
-        )
+        raise FileNotFoundError(f"File not found: {file_path}")
 
     with file_path.open(
         "r",
@@ -40,9 +37,7 @@ def load_yaml(path: str | Path) -> dict[str, Any]:
         content = yaml.safe_load(file)
 
     if content is None:
-        raise ValueError(
-            f"YAML file is empty: {file_path}"
-        )
+        raise ValueError(f"YAML file is empty: {file_path}")
 
     return content
 
@@ -70,15 +65,9 @@ def log_final_test(
     the test set again.
     """
     config = load_config()
-    experiment = load_experiment(
-        experiment_path
-    )
-    threshold_result = load_yaml(
-        threshold_path
-    )
-    test_results = load_yaml(
-        results_path
-    )
+    experiment = load_experiment(experiment_path)
+    threshold_result = load_yaml(threshold_path)
+    test_results = load_yaml(results_path)
 
     resolved_params = get_model_params(
         model_name=experiment["model"],
@@ -86,72 +75,36 @@ def log_final_test(
         params_override=experiment["params"],
     )
 
-    mlflow.set_tracking_uri(
-        tracking_uri
-    )
+    mlflow.set_tracking_uri(tracking_uri)
 
-    mlflow.set_experiment(
-        config["mlflow"]["experiment_name"]
-    )
+    mlflow.set_experiment(config["mlflow"]["experiment_name"])
 
-    run_name = (
-        f"{experiment['name']}_final_test"
-    )
+    run_name = f"{experiment['name']}_final_test"
 
-    with mlflow.start_run(
-        run_name=run_name
-    ):
-
+    with mlflow.start_run(run_name=run_name):
         # ----------------------------------------------------------
         # Parameters describing the selected model and experiment.
         # ----------------------------------------------------------
         mlflow.log_params(
             {
                 "model_name": experiment["model"],
-                "threshold": float(
-                    threshold_result["threshold"]
-                ),
-                "threshold_selection_metric": (
-                    threshold_result[
-                        "selection_metric"
-                    ]
-                ),
-                "cv_n_folds": config[
-                    "split"
-                ]["cv_n_folds"],
-                "test_n_folds": config[
-                    "split"
-                ]["test_n_folds"],
-                "test_fold": config[
-                    "split"
-                ]["test_fold"],
-                "random_state": config[
-                    "split"
-                ]["random_state"],
+                "threshold": float(threshold_result["threshold"]),
+                "threshold_selection_metric": (threshold_result["selection_metric"]),
+                "cv_n_folds": config["split"]["cv_n_folds"],
+                "test_n_folds": config["split"]["test_n_folds"],
+                "test_fold": config["split"]["test_fold"],
+                "random_state": config["split"]["random_state"],
                 "n_predictors": (
-                    len(
-                        config["features"][
-                            "categorical"
-                        ]
-                    )
-                    + len(
-                        config["features"][
-                            "numerical"
-                        ]
-                    )
+                    len(config["features"]["categorical"])
+                    + len(config["features"]["numerical"])
                 ),
             }
         )
 
         mlflow.log_params(
             {
-                f"model_{key}": (
-                    "None"
-                    if value is None
-                    else value
-                )
-                for key, value
-                in resolved_params.items()
+                f"model_{key}": ("None" if value is None else value)
+                for key, value in resolved_params.items()
             }
         )
 
@@ -160,22 +113,18 @@ def log_final_test(
         # ----------------------------------------------------------
         oof_metrics = {
             key: float(value)
-            for key, value
-            in threshold_result.items()
+            for key, value in threshold_result.items()
             if key.startswith("oof_")
         }
 
-        mlflow.log_metrics(
-            oof_metrics
-        )
+        mlflow.log_metrics(oof_metrics)
 
         # ----------------------------------------------------------
         # Final test metrics already computed previously.
         # ----------------------------------------------------------
         test_metrics = {
             key: float(value)
-            for key, value
-            in test_results.items()
+            for key, value in test_results.items()
             if key != "threshold"
             and isinstance(
                 value,
@@ -183,9 +132,7 @@ def log_final_test(
             )
         }
 
-        mlflow.log_metrics(
-            test_metrics
-        )
+        mlflow.log_metrics(test_metrics)
 
         # ----------------------------------------------------------
         # Traceability.
@@ -193,12 +140,8 @@ def log_final_test(
         mlflow.set_tags(
             {
                 "evaluation_stage": "final_test",
-                "test_usage": (
-                    "single fixed holdout evaluation"
-                ),
-                "threshold_source": (
-                    "development out-of-fold predictions"
-                ),
+                "test_usage": ("single fixed holdout evaluation"),
+                "threshold_source": ("development out-of-fold predictions"),
                 "git_commit": get_git_commit(),
                 "git_branch": get_git_branch(),
                 "data_dvc_md5": get_data_dvc_md5(),
@@ -209,53 +152,31 @@ def log_final_test(
         # Configuration and evaluation artifacts.
         # ----------------------------------------------------------
         mlflow.log_artifact(
-            str(
-                resolve_path(
-                    experiment_path
-                )
-            ),
+            str(resolve_path(experiment_path)),
             artifact_path="configuration",
         )
 
         mlflow.log_artifact(
-            str(
-                resolve_path(
-                    threshold_path
-                )
-            ),
+            str(resolve_path(threshold_path)),
             artifact_path="evaluation",
         )
 
         mlflow.log_artifact(
-            str(
-                resolve_path(
-                    results_path
-                )
-            ),
+            str(resolve_path(results_path)),
             artifact_path="evaluation",
         )
 
         mlflow.log_artifact(
-            str(
-                PROJECT_ROOT
-                / "model"
-                / "config.yml"
-            ),
+            str(PROJECT_ROOT / "model" / "config.yml"),
             artifact_path="configuration",
         )
 
-        print(
-            "\nFinal test run registered "
-            "successfully in MLflow."
-        )
+        print("\nFinal test run registered successfully in MLflow.")
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description=(
-            "Register the already-computed final "
-            "test evaluation in MLflow."
-        )
+        description=("Register the already-computed final test evaluation in MLflow.")
     )
 
     parser.add_argument(
@@ -275,9 +196,7 @@ def parse_args():
 
     parser.add_argument(
         "--tracking-uri",
-        default=os.getenv(
-            "MLFLOW_TRACKING_URI"
-        ),
+        default=os.getenv("MLFLOW_TRACKING_URI"),
         required=False,
     )
 
@@ -288,9 +207,7 @@ if __name__ == "__main__":
     args = parse_args()
 
     if not args.tracking_uri:
-        raise ValueError(
-            "An MLflow tracking URI is required."
-        )
+        raise ValueError("An MLflow tracking URI is required.")
 
     log_final_test(
         experiment_path=args.experiment,
