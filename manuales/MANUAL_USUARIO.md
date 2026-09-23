@@ -23,14 +23,14 @@ El tablero tiene una barra superior (o inferior, en móvil) con 4 secciones:
 | **MLOps**       | `/mlops`     | Vista explicativa del pipeline de datos y modelamiento (dataset, EDA, features, MLflow, API), pensada para el equipo técnico. |
 | **Alertas**     | `/validacion`| Detalle de una reserva puntual: predicción del modelo y acciones sugeridas. |
 
-![](first.png) 
+<img width="1251" height="589" alt="first" src="https://github.com/user-attachments/assets/b0c5f157-eae5-4337-8ded-1822ce2ee990" /> 
 
 ### 3.1 Tablero (resumen)
 
 Muestra tres indicadores clave (KPI): reservas en riesgo, tasa de cancelación
 y desempeño del modelo (PR-AUC), junto con gráficos de monitoreo.
 
-![](second.png) 
+<img width="831" height="169" alt="second" src="https://github.com/user-attachments/assets/60946c87-cc36-4493-84a1-42094cd58933" /> 
 
 ### 3.2 Reservas de riesgo priorizadas
 
@@ -39,7 +39,7 @@ probabilidad estimada de cancelación y días de anticipación (lead time).
 Puede buscar una reserva por su ID. Al hacer clic sobre una reserva se abre
 su detalle en la sección **Alertas**.
 
-![](third.png)
+<img width="825" height="195" alt="third" src="https://github.com/user-attachments/assets/a9c2e797-8576-45ed-8676-77ea82476a9b" />
 
 ### 3.3 Alertas / Detalle de reserva (predicción en vivo)
 
@@ -58,7 +58,7 @@ muestra:
 Si la API no está disponible, la sección mostrará "Error al obtener
 predicción"; ver la sección 5 del Manual de Instalación para diagnosticar.
 
-![](four.png)
+<img width="833" height="360" alt="four" src="https://github.com/user-attachments/assets/2c50ce14-4539-4ef4-891a-881d8dd10381" />
 
 ### 3.4 MLOps (vista de pipeline)
 
@@ -67,7 +67,7 @@ construyó el modelo (control de versiones de datos con DVC, EDA, feature
 engineering, tracking de experimentos en MLflow) y los riesgos que el equipo
 vigila en cada etapa (data drift, data leakage, etc.).
 
-![](five.png)
+<img width="825" height="482" alt="five" src="https://github.com/user-attachments/assets/b41d4584-7450-485e-8d46-b2f2ea6369e2" />
 
 ## 4. Cómo interpretar una predicción
 
